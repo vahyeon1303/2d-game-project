@@ -1,0 +1,91 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/build_sandbox.gd" id="1_script"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape_ground"]
+size = Vector2(1280, 24)
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_toolbar"]
+bg_color = Color(0.075, 0.094, 0.13, 0.98)
+border_width_top = 2
+border_color = Color(0.27, 0.32, 0.41, 1)
+content_margin_left = 16.0
+content_margin_top = 10.0
+content_margin_right = 16.0
+content_margin_bottom = 10.0
+
+[node name="BuildSandbox" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+script = ExtResource("1_script")
+
+[node name="World" type="Node2D" parent="."]
+unique_name_in_owner = true
+
+[node name="Ground" type="StaticBody2D" parent="World"]
+position = Vector2(640, 544)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="World/Ground"]
+shape = SubResource("RectangleShape_ground")
+
+[node name="Help" type="Label" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 18.0
+offset_right = 590.0
+offset_bottom = 50.0
+mouse_filter = 2
+text = "아래 목록에서 블록을 끌어 이 영역에 놓으세요"
+theme_override_colors/font_color = Color(0.84, 0.87, 0.92, 1)
+theme_override_font_sizes/font_size = 19
+
+[node name="Toolbar" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -172.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_styles/panel = SubResource("StyleBox_toolbar")
+
+[node name="Layout" type="VBoxContainer" parent="Toolbar"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Header" type="HBoxContainer" parent="Toolbar/Layout"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Toolbar/Layout/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "블록 목록  ·  Shift + 휠 또는 트랙패드로 가로 스크롤"
+theme_override_font_sizes/font_size = 15
+
+[node name="BlockCount" type="Label" parent="Toolbar/Layout/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "배치된 블록: 0"
+
+[node name="ClearButton" type="Button" parent="Toolbar/Layout/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "모두 치우기"
+
+[node name="Scroll" type="ScrollContainer" parent="Toolbar/Layout"]
+custom_minimum_size = Vector2(0, 122)
+layout_mode = 2
+horizontal_scroll_mode = 1
+vertical_scroll_mode = 0
+
+[node name="Palette" type="HBoxContainer" parent="Toolbar/Layout/Scroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8

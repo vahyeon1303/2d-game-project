@@ -1,0 +1,5 @@
+[gd_scene load_steps=2 format=3]
+[ext_resource type="PackedScene" path="res://blocks/block.tscn" id="1"]
+[node name="MetalPlatform" instance=ExtResource("1")]
+block_shape = 4
+block_material = 2
