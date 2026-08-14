@@ -85,6 +85,7 @@ func _drop_data(at_position: Vector2, data: Variant) -> void:
 	placed_object.rotation = float(data.get("rotation_steps", 0)) * ROTATION_STEP_RADIANS
 	if placed_object is PhysicsBlock:
 		placed_object.flipped_horizontally = bool(data.get("flipped", false))
+	placed_object.reset_physics_interpolation()
 	placed_objects.append(placed_object)
 	placed_object.tree_exiting.connect(_on_object_removed.bind(placed_object))
 	_update_block_count()

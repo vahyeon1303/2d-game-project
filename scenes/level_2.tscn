@@ -1,12 +1,19 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://bn0af42s1gq35"]
 
-[ext_resource type="PackedScene" path="res://scenes/level_1.tscn" id="1_level"]
+[ext_resource type="PackedScene" uid="uid://b2bhec147j2bw" path="res://scenes/level_1.tscn" id="1_level"]
 
-[node name="Level2" instance=ExtResource("1_level")]
+[node name="Level2" unique_id=1561867830 instance=ExtResource("1_level")]
 level_number = 2
-starting_balance = 600
-raid_launch_speed = 1450.0
-raid_projectile_count = 7
+starting_balance = 400
 
-[node name="LevelLabel" parent="HUD/Shop/ShopLayout/ShopHeader" index="1"]
+[node name="CollisionShape2D" parent="World/TowerPlatform" parent_id_path=PackedInt32Array(985056946) index="0" unique_id=1851925436]
+position = Vector2(-62.5, 40.5)
+
+[node name="Catapult" parent="World" parent_id_path=PackedInt32Array(37528343) index="2" unique_id=615778465]
+launch_power = 275.0
+fire_interval = 1.8
+projectile_mass = 4.0
+projectile_count = 15
+
+[node name="LevelLabel" parent="HUD/Shop/ShopLayout/ShopHeader" parent_id_path=PackedInt32Array(1916215239) index="1" unique_id=387026619]
 text = "LEVEL 2"

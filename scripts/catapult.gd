@@ -6,10 +6,14 @@ signal raid_finished
 const PROJECTILE_SCENE := preload("res://objects/catapult_stone.tscn")
 const SIZE := 64.0
 const MUZZLE_DISTANCE := 47.0
+const SPEED_PER_POWER := 16.0
 
 @export_category("발사 설정")
-@export_range(100.0, 1600.0, 10.0) var launch_speed := 850.0
-@export_range(0.5, 10.0, 0.1) var fire_interval := 3.0
+## 제한 없는 발사 파워입니다. 내부 물리 속도로 자동 환산됩니다.
+@export var launch_power: float = 53.1
+## 초 단위 발사 간격입니다. 1.0이면 1초마다 한 번 발사합니다.
+@export_range(0.1, 60.0, 0.1, "or_greater") var fire_interval: float = 3.0
+@export_range(0.1, 100.0, 0.1, "or_greater") var projectile_mass := 4.0
 ## 0이면 샌드박스처럼 제한 없이 계속 발사합니다.
 @export_range(0, 100, 1) var projectile_count := 0
 @export var auto_start := true
@@ -87,6 +91,8 @@ func _try_fire() -> bool:
 	var stone := PROJECTILE_SCENE.instantiate() as CatapultStone
 	get_parent().add_child(stone)
 	stone.global_position = muzzle_position
+	stone.mass = projectile_mass
+	stone.reset_physics_interpolation()
 	stone.linear_velocity = velocity
 	return true
 
@@ -108,7 +114,10 @@ func _calculate_launch_velocity(origin: Vector2, target: Vector2) -> Vector2:
 	var delta := target - origin
 	var horizontal_distance := absf(delta.x)
 	var gravity := float(ProjectSettings.get_setting("physics/2d/default_gravity", 980.0))
+	var launch_speed := launch_power * SPEED_PER_POWER
 	if gravity <= 0.0:
+		return Vector2.ZERO
+	if launch_speed <= 0.0:
 		return Vector2.ZERO
 
 	if horizontal_distance < 1.0:

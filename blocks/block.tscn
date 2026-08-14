@@ -8,7 +8,7 @@ bounce = 0.05
 
 [node name="Block" type="RigidBody2D"]
 physics_material_override = SubResource("PhysicsMaterial_block")
-continuous_cd = 1
+continuous_cd = 2
 contact_monitor = true
 max_contacts_reported = 8
 script = ExtResource("1_script")
