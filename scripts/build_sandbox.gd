@@ -7,13 +7,14 @@ const SHAPE_NAMES := ["정사각형", "반사각형", "직사각형", "대형", 
 const MATERIAL_FILES := ["wood", "stone", "metal"]
 const MATERIAL_NAMES := ["나무", "석재", "금속"]
 const BUILD_AREA_BOTTOM := 540.0
+const ROTATION_STEP_RADIANS := PI / 12.0
 
 @onready var world: Node2D = %World
 @onready var palette: HBoxContainer = %Palette
 @onready var block_count: Label = %BlockCount
 @onready var clear_button: Button = %ClearButton
 
-var placed_blocks: Array[PhysicsBlock] = []
+var placed_objects: Array[Node2D] = []
 
 
 func _ready() -> void:
@@ -39,10 +40,32 @@ func _notification(what: int) -> void:
 		queue_redraw()
 
 
+func _input(event: InputEvent) -> void:
+	if not get_viewport().gui_is_dragging():
+		return
+	if not event is InputEventMouseButton or not event.pressed:
+		return
+	var data: Variant = get_viewport().gui_get_drag_data()
+	if not data is Dictionary or data.get("kind", "") != "sandbox_placeable":
+		return
+	var preview := data.get("preview") as BlockDragPreview
+	if event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+		var direction := 1 if event.button_index == MOUSE_BUTTON_WHEEL_UP else -1
+		data["rotation_steps"] = int(data.get("rotation_steps", 0)) + direction
+		if is_instance_valid(preview):
+			preview.set_angle(float(data["rotation_steps"]) * ROTATION_STEP_RADIANS)
+		get_viewport().set_input_as_handled()
+	elif event.button_index == MOUSE_BUTTON_RIGHT and data.get("item_kind", "") == "block":
+		data["flipped"] = not bool(data.get("flipped", false))
+		if is_instance_valid(preview):
+			preview.set_flipped(bool(data["flipped"]))
+		get_viewport().set_input_as_handled()
+
+
 func _can_drop_data(at_position: Vector2, data: Variant) -> bool:
 	return (
 		data is Dictionary
-		and data.get("kind", "") == "construction_block"
+		and data.get("kind", "") == "sandbox_placeable"
 		and at_position.y < BUILD_AREA_BOTTOM
 	)
 
@@ -51,20 +74,31 @@ func _drop_data(at_position: Vector2, data: Variant) -> void:
 	var packed_scene := load(data["scene_path"]) as PackedScene
 	if packed_scene == null:
 		return
-	var block := packed_scene.instantiate() as PhysicsBlock
-	if block == null:
+	var placed_object := packed_scene.instantiate() as Node2D
+	if placed_object == null:
 		return
-	world.add_child(block)
-	block.global_position = Vector2(
+	world.add_child(placed_object)
+	placed_object.global_position = Vector2(
 		clampf(at_position.x, 16.0, size.x - 16.0),
 		clampf(at_position.y, 16.0, BUILD_AREA_BOTTOM - 16.0)
 	)
-	placed_blocks.append(block)
-	block.tree_exiting.connect(_on_block_removed.bind(block))
+	placed_object.rotation = float(data.get("rotation_steps", 0)) * ROTATION_STEP_RADIANS
+	if placed_object is PhysicsBlock:
+		placed_object.flipped_horizontally = bool(data.get("flipped", false))
+	placed_objects.append(placed_object)
+	placed_object.tree_exiting.connect(_on_object_removed.bind(placed_object))
 	_update_block_count()
 
 
 func _create_palette() -> void:
+	var pearl_item := BlockPaletteItem.new()
+	pearl_item.configure("res://objects/pearl.tscn", 0, 0, "진주", "pearl")
+	palette.add_child(pearl_item)
+
+	var catapult_item := BlockPaletteItem.new()
+	catapult_item.configure("res://objects/catapult.tscn", 0, 0, "투석기", "catapult")
+	palette.add_child(catapult_item)
+
 	for material_index in MATERIAL_FILES.size():
 		for shape_index in SHAPE_FILES.size():
 			var item := BlockPaletteItem.new()
@@ -79,18 +113,21 @@ func _create_palette() -> void:
 
 
 func _clear_blocks() -> void:
-	for block in placed_blocks.duplicate():
-		if is_instance_valid(block):
-			block.queue_free()
-	placed_blocks.clear()
+	for placed_object in placed_objects.duplicate():
+		if is_instance_valid(placed_object):
+			placed_object.queue_free()
+	placed_objects.clear()
+	for stone in get_tree().get_nodes_in_group("catapult_stones"):
+		if is_instance_valid(stone):
+			stone.queue_free()
 	_update_block_count()
 
 
-func _on_block_removed(block: PhysicsBlock) -> void:
-	placed_blocks.erase(block)
+func _on_object_removed(placed_object: Node2D) -> void:
+	placed_objects.erase(placed_object)
 	_update_block_count()
 
 
 func _update_block_count() -> void:
 	if block_count != null:
-		block_count.text = "배치된 블록: %d" % placed_blocks.size()
+		block_count.text = "배치된 오브젝트: %d" % placed_objects.size()

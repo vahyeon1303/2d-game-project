@@ -1,0 +1,21 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/pearl.gd" id="1_script"]
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_pearl"]
+friction = 0.55
+bounce = 0.18
+
+[sub_resource type="CircleShape2D" id="CircleShape_pearl"]
+radius = 20.0
+
+[node name="Pearl" type="RigidBody2D"]
+mass = 1.5
+physics_material_override = SubResource("PhysicsMaterial_pearl")
+continuous_cd = 1
+contact_monitor = true
+max_contacts_reported = 8
+script = ExtResource("1_script")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape_pearl")

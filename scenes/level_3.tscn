@@ -1,0 +1,12 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/level_1.tscn" id="1_level"]
+
+[node name="Level3" instance=ExtResource("1_level")]
+level_number = 3
+starting_balance = 700
+raid_launch_speed = 1550.0
+raid_projectile_count = 9
+
+[node name="LevelLabel" parent="HUD/Shop/ShopLayout/ShopHeader" index="1"]
+text = "LEVEL 3"

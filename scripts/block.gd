@@ -52,6 +52,12 @@ const MATERIAL_DENSITIES := {
 		if is_inside_tree():
 			_refresh_block()
 
+@export var flipped_horizontally := false:
+	set(value):
+		flipped_horizontally = value
+		if is_inside_tree():
+			_refresh_block()
+
 
 func _ready() -> void:
 	_refresh_block()
@@ -82,18 +88,26 @@ func _refresh_block() -> void:
 func _get_polygon() -> PackedVector2Array:
 	var dimensions := _get_dimensions_units() * unit_size
 	var half := dimensions * 0.5
+	var points: PackedVector2Array
 	if block_shape == BlockShape.SLOPE:
-		return PackedVector2Array([
+		points = PackedVector2Array([
 			Vector2(-half.x, half.y),
 			Vector2(half.x, half.y),
 			Vector2(half.x, -half.y),
 		])
-	return PackedVector2Array([
-		Vector2(-half.x, -half.y),
-		Vector2(half.x, -half.y),
-		Vector2(half.x, half.y),
-		Vector2(-half.x, half.y),
-	])
+	else:
+		points = PackedVector2Array([
+			Vector2(-half.x, -half.y),
+			Vector2(half.x, -half.y),
+			Vector2(half.x, half.y),
+			Vector2(-half.x, half.y),
+		])
+	if flipped_horizontally:
+		for index in points.size():
+			var point := points[index]
+			point.x *= -1.0
+			points[index] = point
+	return points
 
 
 func _get_dimensions_units() -> Vector2:

@@ -1,0 +1,208 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/level_controller.gd" id="1_level"]
+[ext_resource type="PackedScene" path="res://objects/catapult.tscn" id="2_catapult"]
+[ext_resource type="Script" path="res://scripts/level_drop_area.gd" id="3_drop"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape_ground"]
+size = Vector2(2400, 40)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape_platform"]
+size = Vector2(256, 24)
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_shop"]
+bg_color = Color(0.075, 0.094, 0.13, 0.98)
+border_width_top = 2
+border_color = Color(0.27, 0.32, 0.41, 1)
+content_margin_left = 10.0
+content_margin_top = 7.0
+content_margin_right = 10.0
+content_margin_bottom = 7.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_result"]
+bg_color = Color(0.11, 0.14, 0.2, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.45, 0.5, 0.6, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+content_margin_left = 42.0
+content_margin_top = 30.0
+content_margin_right = 42.0
+content_margin_bottom = 30.0
+
+[node name="Level1" type="Node2D"]
+script = ExtResource("1_level")
+
+[node name="World" type="Node2D" parent="."]
+unique_name_in_owner = true
+
+[node name="Ground" type="StaticBody2D" parent="World"]
+position = Vector2(1200, 640)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="World/Ground"]
+shape = SubResource("RectangleShape_ground")
+
+[node name="TowerPlatform" type="StaticBody2D" parent="World"]
+position = Vector2(1850, 532)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="World/TowerPlatform"]
+shape = SubResource("RectangleShape_platform")
+
+[node name="Catapult" parent="World" instance=ExtResource("2_catapult")]
+unique_name_in_owner = true
+position = Vector2(220, 588)
+launch_speed = 1350.0
+fire_interval = 3.0
+projectile_count = 5
+auto_start = false
+
+[node name="Camera2D" type="Camera2D" parent="."]
+unique_name_in_owner = true
+position = Vector2(1360, 360)
+limit_left = 0
+limit_top = 0
+limit_right = 2400
+limit_bottom = 720
+position_smoothing_enabled = true
+position_smoothing_speed = 12.0
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="DropArea" type="Control" parent="HUD"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+script = ExtResource("3_drop")
+
+[node name="RaidButton" type="Button" parent="HUD"]
+unique_name_in_owner = true
+offset_left = 565.0
+offset_top = 16.0
+offset_right = 715.0
+offset_bottom = 60.0
+text = "레이드 시작"
+theme_override_font_sizes/font_size = 17
+
+[node name="StatusLabel" type="Label" parent="HUD"]
+unique_name_in_owner = true
+offset_left = 390.0
+offset_top = 67.0
+offset_right = 890.0
+offset_bottom = 94.0
+mouse_filter = 2
+text = "보유한 진주를 탑 위에 배치한 뒤 시작하세요."
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.88, 0.9, 0.94, 1)
+theme_override_font_sizes/font_size = 14
+
+[node name="BalancePanel" type="PanelContainer" parent="HUD"]
+offset_left = 1080.0
+offset_top = 18.0
+offset_right = 1260.0
+offset_bottom = 58.0
+
+[node name="BalanceLabel" type="Label" parent="HUD/BalancePanel"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "잔액: 500"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 17
+
+[node name="Shop" type="PanelContainer" parent="HUD"]
+layout_mode = 3
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -112.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_styles/panel = SubResource("StyleBox_shop")
+
+[node name="ShopLayout" type="VBoxContainer" parent="HUD/Shop"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="ShopHeader" type="HBoxContainer" parent="HUD/Shop/ShopLayout"]
+layout_mode = 2
+
+[node name="Hint" type="Label" parent="HUD/Shop/ShopLayout/ShopHeader"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "클릭: 구매  ·  드래그: 배치  ·  우클릭: 회수 / 드래그 중 반전  ·  드래그 중 휠: 회전"
+theme_override_colors/font_color = Color(0.76, 0.79, 0.84, 1)
+theme_override_font_sizes/font_size = 12
+
+[node name="LevelLabel" type="Label" parent="HUD/Shop/ShopLayout/ShopHeader"]
+layout_mode = 2
+text = "LEVEL 1"
+theme_override_font_sizes/font_size = 13
+
+[node name="Scroll" type="ScrollContainer" parent="HUD/Shop/ShopLayout"]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+horizontal_scroll_mode = 1
+vertical_scroll_mode = 0
+
+[node name="Palette" type="HBoxContainer" parent="HUD/Shop/ShopLayout/Scroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="ResultOverlay" type="Control" parent="HUD"]
+unique_name_in_owner = true
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+
+[node name="Shade" type="ColorRect" parent="HUD/ResultOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.52)
+
+[node name="ResultPanel" type="PanelContainer" parent="HUD/ResultOverlay"]
+layout_mode = 0
+offset_left = 450.0
+offset_top = 255.0
+offset_right = 830.0
+offset_bottom = 445.0
+theme_override_styles/panel = SubResource("StyleBox_result")
+
+[node name="ResultLayout" type="VBoxContainer" parent="HUD/ResultOverlay/ResultPanel"]
+layout_mode = 2
+theme_override_constants/separation = 22
+
+[node name="ResultText" type="Label" parent="HUD/ResultOverlay/ResultPanel/ResultLayout"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+text = "레벨 1 성공!"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 28
+
+[node name="ResultButton" type="Button" parent="HUD/ResultOverlay/ResultPanel/ResultLayout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+text = "다음 레벨"
+theme_override_font_sizes/font_size = 17

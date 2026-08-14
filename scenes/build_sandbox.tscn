@@ -40,7 +40,7 @@ offset_top = 18.0
 offset_right = 590.0
 offset_bottom = 50.0
 mouse_filter = 2
-text = "아래 목록에서 블록을 끌어 이 영역에 놓으세요"
+text = "블록과 오브젝트를 끌어 놓으세요  ·  드래그 중 휠: 15° 회전  ·  블록 우클릭: 반전"
 theme_override_colors/font_color = Color(0.84, 0.87, 0.92, 1)
 theme_override_font_sizes/font_size = 19
 
@@ -65,13 +65,13 @@ layout_mode = 2
 [node name="Title" type="Label" parent="Toolbar/Layout/Header"]
 layout_mode = 2
 size_flags_horizontal = 3
-text = "블록 목록  ·  Shift + 휠 또는 트랙패드로 가로 스크롤"
+text = "배치 목록  ·  평상시 휠: 가로 스크롤  ·  드래그 중 휠: 회전  ·  우클릭: 반전"
 theme_override_font_sizes/font_size = 15
 
 [node name="BlockCount" type="Label" parent="Toolbar/Layout/Header"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "배치된 블록: 0"
+text = "배치된 오브젝트: 0"
 
 [node name="ClearButton" type="Button" parent="Toolbar/Layout/Header"]
 unique_name_in_owner = true
