@@ -4,7 +4,13 @@ extends StaticBody2D
 signal raid_finished
 
 const PROJECTILE_SCENE := preload("res://objects/catapult_stone.tscn")
+const BOMB_PROJECTILE_SCENE := preload("res://objects/bomb_projectile.tscn")
+const TEXTURE := preload("res://Asset/Cannon.png")
+const SHOT_SOUND := preload("res://Asset/Shot.mp3")
+const TEXTURE_REGION := Rect2(4.0, 144.0, 496.0, 212.0)
 const SIZE := 64.0
+const VISUAL_SIZE := Vector2(128.0, 54.70968)
+const VISUAL_RECT := Rect2(-64.0, -22.70968, 128.0, 54.70968)
 const MUZZLE_DISTANCE := 47.0
 const SPEED_PER_POWER := 16.0
 
@@ -18,10 +24,24 @@ const SPEED_PER_POWER := 16.0
 @export_range(0, 100, 1) var projectile_count := 0
 @export var auto_start := true
 
+@export_category("폭탄 탄환")
+## 0보다 크면 이 수량을 일반 탄환보다 먼저 발사합니다.
+@export_range(0, 100, 1) var bomb_projectile_count := 0
+## 폭발 범위 안의 물리 오브젝트에 가하는 순간적인 힘입니다.
+@export var bomb_explosion_force: float = 2500.0
+
+@export_category("효과음")
+@export_range(-40.0, 6.0, 0.5) var shot_sound_volume_db := -4.0
+
 var arm_angle_local := -PI * 0.25
 var _shots_attempted := 0
+var _bomb_shots_attempted := 0
 var _raid_active := false
 var _fire_timer: Timer
+var _shot_audio_player: AudioStreamPlayer
+var _sandbox_firing_mode := false
+var _sandbox_stones_enabled := true
+var _sandbox_bombs_enabled := false
 
 
 func _ready() -> void:
@@ -30,6 +50,12 @@ func _ready() -> void:
 	_fire_timer.wait_time = fire_interval
 	_fire_timer.timeout.connect(_on_fire_timeout)
 	add_child(_fire_timer)
+	_shot_audio_player = AudioStreamPlayer.new()
+	_shot_audio_player.name = "ShotAudio"
+	_shot_audio_player.stream = SHOT_SOUND
+	_shot_audio_player.volume_db = shot_sound_volume_db
+	_shot_audio_player.max_polyphony = 4
+	add_child(_shot_audio_player)
 	if auto_start:
 		start_raid()
 	queue_redraw()
@@ -37,6 +63,7 @@ func _ready() -> void:
 
 func start_raid() -> void:
 	_shots_attempted = 0
+	_bomb_shots_attempted = 0
 	_raid_active = true
 	_fire_timer.wait_time = fire_interval
 	_fire_timer.start()
@@ -48,32 +75,45 @@ func stop_raid() -> void:
 		_fire_timer.stop()
 
 
+func configure_sandbox_firing(stones_enabled: bool, bombs_enabled: bool) -> void:
+	_sandbox_firing_mode = true
+	_sandbox_stones_enabled = stones_enabled
+	_sandbox_bombs_enabled = bombs_enabled
+
+
 func _draw() -> void:
-	draw_rect(Rect2(-32, 11, 64, 18), Color("#71451f"), true)
-	draw_rect(Rect2(-31, 10, 62, 19), Color("#a36a32"), false, 2.0)
-	draw_circle(Vector2(-21, 25), 7.0, Color("#343941"))
-	draw_circle(Vector2(21, 25), 7.0, Color("#343941"))
-	draw_circle(Vector2(-21, 25), 3.5, Color("#7b828c"))
-	draw_circle(Vector2(21, 25), 3.5, Color("#7b828c"))
-	draw_line(Vector2(0, 14), Vector2.from_angle(arm_angle_local) * 24.0, Color("#bd7d3e"), 7.0, true)
-	draw_circle(Vector2.ZERO, 6.0, Color("#4a5059"))
-	var cup_position := Vector2.from_angle(arm_angle_local) * 26.0
-	draw_circle(cup_position, 6.0, Color("#59606a"))
+	draw_texture_rect_region(TEXTURE, VISUAL_RECT, TEXTURE_REGION)
 
 
 func _on_fire_timeout() -> void:
 	if not _raid_active:
 		return
-	_try_fire()
-	if projectile_count <= 0:
+	if _sandbox_firing_mode:
+		_fire_sandbox_projectile()
 		return
-	_shots_attempted += 1
-	if _shots_attempted >= projectile_count:
+	var use_bomb := _bomb_shots_attempted < bomb_projectile_count
+	if not fire_once(use_bomb):
+		return
+	if use_bomb:
+		_bomb_shots_attempted += 1
+	elif projectile_count > 0:
+		_shots_attempted += 1
+	if (
+		projectile_count > 0
+		and _bomb_shots_attempted >= bomb_projectile_count
+		and _shots_attempted >= projectile_count
+	):
 		stop_raid()
 		raid_finished.emit()
 
 
-func _try_fire() -> bool:
+func _fire_sandbox_projectile() -> void:
+	if not _sandbox_stones_enabled and not _sandbox_bombs_enabled:
+		return
+	fire_once(_sandbox_bombs_enabled)
+
+
+func fire_once(use_bomb := false) -> bool:
 	var target := _find_nearest_pearl()
 	if target == null:
 		return false
@@ -88,13 +128,24 @@ func _try_fire() -> bool:
 
 	arm_angle_local = velocity.angle() - global_rotation
 	queue_redraw()
-	var stone := PROJECTILE_SCENE.instantiate() as CatapultStone
-	get_parent().add_child(stone)
-	stone.global_position = muzzle_position
-	stone.mass = projectile_mass
-	stone.reset_physics_interpolation()
-	stone.linear_velocity = velocity
+	var projectile_scene := BOMB_PROJECTILE_SCENE if use_bomb else PROJECTILE_SCENE
+	var projectile := projectile_scene.instantiate() as RigidBody2D
+	get_parent().add_child(projectile)
+	if use_bomb:
+		projectile.call("ignore_source_until_clear", self)
+	projectile.global_position = muzzle_position
+	projectile.mass = projectile_mass
+	if use_bomb:
+		projectile.set("explosion_force", bomb_explosion_force)
+	projectile.reset_physics_interpolation()
+	projectile.linear_velocity = velocity
+	_shot_audio_player.play()
 	return true
+
+
+## 이전 테스트 및 장면과의 호환성을 위한 별칭입니다.
+func _try_fire() -> bool:
+	return fire_once()
 
 
 func _find_nearest_pearl() -> Pearl:

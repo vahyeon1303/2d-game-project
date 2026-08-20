@@ -1,19 +1,55 @@
 [gd_scene format=3 uid="uid://bn0af42s1gq35"]
 
 [ext_resource type="PackedScene" uid="uid://b2bhec147j2bw" path="res://scenes/level_1.tscn" id="1_level"]
+[ext_resource type="PackedScene" path="res://objects/catapult.tscn" id="2_catapult"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape_platform"]
+size = Vector2(307.75, 420)
 
 [node name="Level2" unique_id=1561867830 instance=ExtResource("1_level")]
 level_number = 2
-starting_balance = 400
+starting_balance = 700
 
 [node name="CollisionShape2D" parent="World/TowerPlatform" parent_id_path=PackedInt32Array(985056946) index="0" unique_id=1851925436]
-position = Vector2(-62.5, 40.5)
+position = Vector2(-404, 31)
+
+[node name="CollisionShape2D3" type="CollisionShape2D" parent="World/TowerPlatform" parent_id_path=PackedInt32Array(985056946) index="1" unique_id=1906777575]
+position = Vector2(114, -144)
+shape = SubResource("RectangleShape_platform")
+
+[node name="CollisionShape2D2" type="CollisionShape2D" parent="World/TowerPlatform" parent_id_path=PackedInt32Array(985056946) index="2" unique_id=1741212190]
+position = Vector2(-582, 81)
+rotation = -0.53894156
+shape = SubResource("RectangleShape_platform")
+
+[node name="CollisionShape2D_2" parent="World/TowerPlatform" parent_id_path=PackedInt32Array(985056946) index="3" unique_id=553284000]
+position = Vector2(55, 97)
 
 [node name="Catapult" parent="World" parent_id_path=PackedInt32Array(37528343) index="2" unique_id=615778465]
-launch_power = 275.0
-fire_interval = 1.8
+launch_power = 250.0
+fire_interval = 3.0
 projectile_mass = 4.0
-projectile_count = 15
+bomb_explosion_force = 7500.0
+
+[node name="Catapult2" parent="World" parent_id_path=PackedInt32Array(37528343) index="4" unique_id=2020407137 instance=ExtResource("2_catapult")]
+position = Vector2(440, 704)
+launch_power = 250.0
+projectile_count = 3
+auto_start = false
+bomb_projectile_count = 3
+bomb_explosion_force = 7500.0
+
+[node name="RaidButton" parent="HUD" parent_id_path=PackedInt32Array(499936834) index="1" unique_id=1141649291]
+offset_top = 0.0
+offset_bottom = 88.0
+grow_horizontal = 2
+
+[node name="BalancePanel" parent="HUD" parent_id_path=PackedInt32Array(499936834) index="5" unique_id=1833703175]
+offset_left = -360.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 80.0
+grow_horizontal = 0
 
 [node name="LevelLabel" parent="HUD/Shop/ShopLayout/ShopHeader" parent_id_path=PackedInt32Array(1916215239) index="1" unique_id=387026619]
 text = "LEVEL 2"

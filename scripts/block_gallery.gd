@@ -22,7 +22,7 @@ const SHAPE_NAMES := [
 
 const MATERIAL_FILES := ["wood", "stone", "metal"]
 const MATERIAL_NAMES := ["나무", "석재", "금속"]
-const ROW_COLORS := [Color("#d5a66a"), Color("#c4c8ce"), Color("#89919d")]
+const ROW_COLORS := [Color("#e0e0e0"), Color("#a0a0a0"), Color("#606060")]
 
 
 func _ready() -> void:
@@ -40,7 +40,7 @@ func _create_title() -> void:
 	var note := Label.new()
 	note.text = "표시 질량 = 블록 면적 × 재질 밀도 (나무 1 / 석재 2.5 / 금속 5)"
 	note.position = Vector2(31, 54)
-	note.modulate = Color("#b8c0cc")
+	note.modulate = Color("#b8b8b8")
 	note.add_theme_font_size_override("font_size", 16)
 	add_child(note)
 

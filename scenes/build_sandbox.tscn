@@ -1,20 +1,44 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene format=3 uid="uid://cvr6oor0175h1"]
 
-[ext_resource type="Script" path="res://scripts/build_sandbox.gd" id="1_script"]
+[ext_resource type="Script" uid="uid://cj6u0rlf5maq6" path="res://scripts/build_sandbox.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://dp2rfaclsubuh" path="res://Asset/Background.jpg" id="2_background"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape_ground"]
-size = Vector2(1280, 24)
+size = Vector2(2560, 48)
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_settings"]
+content_margin_left = 18.0
+content_margin_top = 14.0
+content_margin_right = 18.0
+content_margin_bottom = 14.0
+bg_color = Color(0.035, 0.035, 0.035, 0.96)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.72, 0.72, 0.72, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
 
 [sub_resource type="StyleBoxFlat" id="StyleBox_toolbar"]
-bg_color = Color(0.075, 0.094, 0.13, 0.98)
-border_width_top = 2
-border_color = Color(0.27, 0.32, 0.41, 1)
-content_margin_left = 16.0
-content_margin_top = 10.0
-content_margin_right = 16.0
-content_margin_bottom = 10.0
+content_margin_left = 32.0
+content_margin_top = 20.0
+content_margin_right = 32.0
+content_margin_bottom = 20.0
+bg_color = Color(0.035, 0.035, 0.035, 0.98)
+border_width_left = 2
+border_width_top = 4
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.72, 0.72, 0.72, 1)
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+corner_radius_bottom_right = 24
+corner_radius_bottom_left = 24
 
-[node name="BuildSandbox" type="Control"]
+[node name="BuildSandbox" type="Control" unique_id=457428744]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -24,68 +48,220 @@ grow_vertical = 2
 mouse_filter = 1
 script = ExtResource("1_script")
 
-[node name="World" type="Node2D" parent="."]
+[node name="BackgroundLayer" type="CanvasLayer" parent="." unique_id=1254535335]
+layer = -10
+
+[node name="Background" type="TextureRect" parent="BackgroundLayer" unique_id=482949024]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_background")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="World" type="Node2D" parent="." unique_id=1338701879]
 unique_name_in_owner = true
 
-[node name="Ground" type="StaticBody2D" parent="World"]
-position = Vector2(640, 544)
+[node name="Ground" type="StaticBody2D" parent="World" unique_id=1841620980]
+position = Vector2(1280, 1088)
+collision_layer = 3
+collision_mask = 3
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="World/Ground"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="World/Ground" unique_id=950040272]
 shape = SubResource("RectangleShape_ground")
 
-[node name="Help" type="Label" parent="."]
+[node name="Help" type="Label" parent="." unique_id=722348466]
 layout_mode = 0
-offset_left = 20.0
-offset_top = 18.0
-offset_right = 590.0
-offset_bottom = 50.0
-mouse_filter = 2
-text = "블록과 오브젝트를 끌어 놓으세요  ·  드래그 중 휠: 15° 회전  ·  블록 우클릭: 반전"
-theme_override_colors/font_color = Color(0.84, 0.87, 0.92, 1)
-theme_override_font_sizes/font_size = 19
+offset_left = 40.0
+offset_top = 36.0
+offset_right = 1180.0
+offset_bottom = 100.0
+theme_override_colors/font_color = Color(0.9, 0.9, 0.9, 1)
+theme_override_font_sizes/font_size = 38
+text = "드래그: 배치  ·  휠: 15° 회전  ·  드래그 중 우클릭: 반전  ·  배치된 오브젝트 우클릭: 제거"
 
-[node name="Toolbar" type="PanelContainer" parent="."]
+[node name="SaveLayoutButton" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 40.0
+offset_top = 116.0
+offset_right = 260.0
+offset_bottom = 188.0
+theme_override_font_sizes/font_size = 28
+text = "블록 저장"
+
+[node name="LoadLayoutButton" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 276.0
+offset_top = 116.0
+offset_right = 496.0
+offset_bottom = 188.0
+theme_override_font_sizes/font_size = 28
+text = "블록 불러오기"
+
+[node name="LayoutStatusLabel" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 40.0
+offset_top = 196.0
+offset_right = 760.0
+offset_bottom = 244.0
+theme_override_colors/font_color = Color(0.9, 0.9, 0.9, 1)
+theme_override_font_sizes/font_size = 24
+
+[node name="CatapultToggleButton" type="Button" parent="." unique_id=575862223]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -420.0
+offset_top = 32.0
+offset_right = -40.0
+offset_bottom = 112.0
+grow_horizontal = 0
+theme_override_font_sizes/font_size = 30
+text = "돌 투척: 활성"
+
+[node name="BombToggleButton" type="Button" parent="." unique_id=1216252240]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -420.0
+offset_top = 124.0
+offset_right = -40.0
+offset_bottom = 204.0
+grow_horizontal = 0
+theme_override_font_sizes/font_size = 30
+text = "폭탄 탄환: 비활성"
+
+[node name="CatapultSettings" type="PanelContainer" parent="." unique_id=16766311]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -420.0
+offset_top = 216.0
+offset_right = -40.0
+offset_bottom = 480.0
+grow_horizontal = 0
+theme_override_styles/panel = SubResource("StyleBox_settings")
+
+[node name="SettingsLayout" type="VBoxContainer" parent="CatapultSettings" unique_id=1529117686]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="CatapultSettings/SettingsLayout" unique_id=678907407]
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+text = "투석기 설정"
+
+[node name="IntervalRow" type="HBoxContainer" parent="CatapultSettings/SettingsLayout" unique_id=1586511208]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Label" type="Label" parent="CatapultSettings/SettingsLayout/IntervalRow" unique_id=1797896970]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "발사 간격"
+
+[node name="FireIntervalSpinBox" type="SpinBox" parent="CatapultSettings/SettingsLayout/IntervalRow" unique_id=569274946]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.1
+max_value = 60.0
+step = 0.1
+value = 3.0
+allow_greater = true
+suffix = " 초"
+
+[node name="PowerRow" type="HBoxContainer" parent="CatapultSettings/SettingsLayout" unique_id=237361416]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Label" type="Label" parent="CatapultSettings/SettingsLayout/PowerRow" unique_id=1924744132]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "발사 강도"
+
+[node name="LaunchPowerSpinBox" type="SpinBox" parent="CatapultSettings/SettingsLayout/PowerRow" unique_id=1528082137]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 1.0
+max_value = 1000.0
+value = 200.0
+allow_greater = true
+
+[node name="ExplosionForceRow" type="HBoxContainer" parent="CatapultSettings/SettingsLayout"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Label" type="Label" parent="CatapultSettings/SettingsLayout/ExplosionForceRow"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "폭발력 (Force)"
+
+[node name="ExplosionForceSpinBox" type="SpinBox" parent="CatapultSettings/SettingsLayout/ExplosionForceRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 100000.0
+step = 100.0
+value = 2500.0
+allow_greater = true
+
+[node name="Toolbar" type="PanelContainer" parent="." unique_id=1189692572]
 layout_mode = 1
 anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = -172.0
+offset_top = -344.0
 grow_horizontal = 2
 grow_vertical = 0
 theme_override_styles/panel = SubResource("StyleBox_toolbar")
 
-[node name="Layout" type="VBoxContainer" parent="Toolbar"]
+[node name="Layout" type="VBoxContainer" parent="Toolbar" unique_id=1027994307]
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 16
 
-[node name="Header" type="HBoxContainer" parent="Toolbar/Layout"]
+[node name="Header" type="HBoxContainer" parent="Toolbar/Layout" unique_id=503786938]
 layout_mode = 2
 
-[node name="Title" type="Label" parent="Toolbar/Layout/Header"]
+[node name="Title" type="Label" parent="Toolbar/Layout/Header" unique_id=1442246305]
 layout_mode = 2
 size_flags_horizontal = 3
-text = "배치 목록  ·  평상시 휠: 가로 스크롤  ·  드래그 중 휠: 회전  ·  우클릭: 반전"
-theme_override_font_sizes/font_size = 15
+theme_override_font_sizes/font_size = 30
+text = "배치 목록  ·  평상시 휠: 가로 스크롤  ·  드래그 중 휠: 회전  ·  드래그 중 우클릭: 반전"
 
-[node name="BlockCount" type="Label" parent="Toolbar/Layout/Header"]
+[node name="BlockCount" type="Label" parent="Toolbar/Layout/Header" unique_id=970536816]
 unique_name_in_owner = true
 layout_mode = 2
 text = "배치된 오브젝트: 0"
 
-[node name="ClearButton" type="Button" parent="Toolbar/Layout/Header"]
+[node name="ClearButton" type="Button" parent="Toolbar/Layout/Header" unique_id=455766501]
 unique_name_in_owner = true
 layout_mode = 2
 text = "모두 치우기"
 
-[node name="Scroll" type="ScrollContainer" parent="Toolbar/Layout"]
-custom_minimum_size = Vector2(0, 122)
+[node name="Scroll" type="ScrollContainer" parent="Toolbar/Layout" unique_id=630053501]
+custom_minimum_size = Vector2(0, 244)
 layout_mode = 2
-horizontal_scroll_mode = 1
 vertical_scroll_mode = 0
 
-[node name="Palette" type="HBoxContainer" parent="Toolbar/Layout/Scroll"]
+[node name="Palette" type="HBoxContainer" parent="Toolbar/Layout/Scroll" unique_id=207701570]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 8
+theme_override_constants/separation = 16

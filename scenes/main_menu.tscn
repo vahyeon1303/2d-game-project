@@ -1,8 +1,8 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://cchpjdnp3xtu3"]
 
-[ext_resource type="Script" path="res://scripts/main_menu.gd" id="1_script"]
+[ext_resource type="Script" uid="uid://o7acd0rl74md" path="res://scripts/main_menu.gd" id="1_script"]
 
-[node name="MainMenu" type="Control"]
+[node name="MainMenu" type="Control" unique_id=497889705]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -11,7 +11,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_script")
 
-[node name="Background" type="ColorRect" parent="."]
+[node name="Background" type="ColorRect" parent="." unique_id=427098932]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -19,14 +19,46 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-color = Color(0.07, 0.09, 0.13, 1)
+color = Color(0.015, 0.015, 0.015, 1)
 
-[node name="StartGameButton" type="Button" parent="."]
+[node name="StartGameButton" type="Button" parent="." unique_id=1604097410]
 unique_name_in_owner = true
 layout_mode = 0
-offset_left = 540.0
-offset_top = 322.0
-offset_right = 740.0
-offset_bottom = 390.0
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -68.0
+offset_right = 200.0
+offset_bottom = 68.0
+theme_override_font_sizes/font_size = 48
 text = "게임 시작"
-theme_override_font_sizes/font_size = 24
+
+[node name="SandboxButton" type="Button" parent="." unique_id=101658955]
+unique_name_in_owner = true
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = 88.0
+offset_right = 200.0
+offset_bottom = 224.0
+theme_override_font_sizes/font_size = 48
+text = "샌드박스"
+
+[node name="QuitButton" type="Button" parent="." unique_id=1699423574]
+unique_name_in_owner = true
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = 244.0
+offset_right = 200.0
+offset_bottom = 380.0
+theme_override_font_sizes/font_size = 48
+text = "게임 종료"

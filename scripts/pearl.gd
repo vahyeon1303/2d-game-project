@@ -2,6 +2,8 @@ class_name Pearl
 extends RigidBody2D
 
 const RADIUS := 20.0
+const TEXTURE := preload("res://Asset/Pearl.png")
+const TEXTURE_REGION := Rect2(49.0, 49.0, 254.0, 254.0)
 
 
 func _ready() -> void:
@@ -10,7 +12,6 @@ func _ready() -> void:
 
 
 func _draw() -> void:
-	draw_circle(Vector2.ZERO, RADIUS, Color("#f4e8d2"))
-	draw_circle(Vector2.ZERO, RADIUS - 3.0, Color("#ddd5f4"))
-	draw_circle(Vector2(-6, -7), 5.0, Color(1, 1, 1, 0.72))
-	draw_arc(Vector2.ZERO, RADIUS, 0.0, TAU, 32, Color("#fffaf0"), 2.0, true)
+	var diameter := RADIUS * 2.0
+	var destination := Rect2(Vector2.ONE * -RADIUS, Vector2.ONE * diameter)
+	draw_texture_rect_region(TEXTURE, destination, TEXTURE_REGION)

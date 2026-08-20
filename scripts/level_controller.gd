@@ -9,18 +9,19 @@ const MATERIAL_FILES := ["wood", "stone", "metal"]
 const MATERIAL_NAMES := ["나무", "석재", "금속"]
 const MATERIAL_PRICE_PER_AREA := [8.0, 14.0, 22.0]
 const ROTATION_STEP_RADIANS := PI / 12.0
-const WORLD_WIDTH := 2400.0
-const VIEWPORT_WIDTH := 1280.0
-const GROUND_TOP := 620.0
-const BUILD_MIN_X := 760.0
-const UI_TOP := 608.0
+const WORLD_WIDTH := 4800.0
+const WORLD_HEIGHT := 1440.0
+const VIEWPORT_WIDTH := 2560.0
+const GROUND_TOP := 1240.0
+const BUILD_MIN_X := 1520.0
+const UI_TOP := 1209.0
 const SUCCESS_HEIGHT_MARGIN := 55.0
 
 @export_range(1, 3, 1) var level_number := 1
 @export var starting_balance := 500
 @export_category("승패 설정")
 ## Godot에서는 화면 아래쪽일수록 Y값이 커집니다. 진주가 이 값 이상이면 즉시 실패합니다.
-@export var pearl_game_over_y: float = 620.0
+@export var pearl_game_over_y: float = 1240.0
 
 @onready var world: Node2D = %World
 @onready var camera: Camera2D = %Camera2D
@@ -29,7 +30,9 @@ const SUCCESS_HEIGHT_MARGIN := 55.0
 @onready var palette: HBoxContainer = %Palette
 @onready var balance_label: Label = %BalanceLabel
 @onready var start_button: Button = %RaidButton
-@onready var status_label: Label = %StatusLabel
+@onready var save_layout_button: Button = %SaveLayoutButton
+@onready var load_layout_button: Button = %LoadLayoutButton
+@onready var layout_status_label: Label = %LayoutStatusLabel
 @onready var result_overlay: Control = %ResultOverlay
 @onready var result_text: Label = %ResultText
 @onready var result_button: Button = %ResultButton
@@ -40,61 +43,69 @@ var shop_items: Dictionary = {}
 var placed_objects: Array[CollisionObject2D] = []
 var raid_started := false
 var raid_finished := false
-var raid_paused := false
+var catapults: Array[Catapult] = []
+var _remaining_catapult_shots: Array[int] = []
+var _remaining_bomb_shots: Array[int] = []
+var _next_catapult_index := 0
+var _attack_timer: Timer
+var layout_save_path := ""
 
 
 func _ready() -> void:
-	Engine.time_scale = 1.0
 	get_viewport().physics_object_picking = true
 	camera.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
+	layout_save_path = "user://level_%d_layout.json" % level_number
 	balance = starting_balance
+	_setup_attack_sequence()
 	_create_shop()
 	_update_balance()
 	start_button.pressed.connect(_on_raid_button_pressed)
+	save_layout_button.pressed.connect(_save_block_layout)
+	load_layout_button.pressed.connect(_load_block_layout)
 	result_button.pressed.connect(_on_result_button_pressed)
-	catapult.raid_finished.connect(_on_catapult_raid_finished)
 	result_overlay.hide()
-	status_label.text = "보유한 진주를 탑 위에 배치한 뒤 시작하세요."
 	queue_redraw()
-
-
-func _exit_tree() -> void:
-	Engine.time_scale = 1.0
-
 
 func _physics_process(_delta: float) -> void:
 	if not raid_started or raid_finished:
 		return
 	var pearls := _get_level_pearls()
 	if pearls.is_empty():
-		catapult.stop_raid()
+		_stop_attack_sequence()
 		_finish_raid(true)
 		return
 	for pearl in pearls:
 		if pearl.global_position.y >= pearl_game_over_y:
-			catapult.stop_raid()
+			_stop_attack_sequence()
 			_finish_raid(true)
 			return
 
 
 func _draw() -> void:
-	draw_rect(Rect2(0, 0, WORLD_WIDTH, 720), Color("#151c28"), true)
-	var grid_color := Color(0.24, 0.29, 0.37, 0.22)
+	var grid_color := Color(1, 1, 1, 0.08)
 	for x in range(0, int(WORLD_WIDTH) + 1, 64):
 		draw_line(Vector2(x, 0), Vector2(x, GROUND_TOP), grid_color, 1.0)
 	for y in range(0, int(GROUND_TOP) + 1, 64):
 		draw_line(Vector2(0, y), Vector2(WORLD_WIDTH, y), grid_color, 1.0)
-	draw_rect(Rect2(0, 0, BUILD_MIN_X, GROUND_TOP), Color(0.36, 0.12, 0.12, 0.13), true)
-	draw_line(Vector2(BUILD_MIN_X, 0), Vector2(BUILD_MIN_X, GROUND_TOP), Color(0.72, 0.3, 0.3, 0.45), 2.0)
-	draw_rect(Rect2(0, GROUND_TOP, WORLD_WIDTH, 100), Color("#3f4857"), true)
-	draw_line(Vector2(0, GROUND_TOP), Vector2(WORLD_WIDTH, GROUND_TOP), Color("#aab1bd"), 2.0)
-	var platform_rect := _get_platform_world_rect()
-	draw_rect(platform_rect, Color("#737c89"), true)
-	draw_rect(platform_rect, Color("#c5cad1"), false, 2.0)
-	draw_string(ThemeDB.fallback_font, Vector2(BUILD_MIN_X - 215, 40), "배치 금지 구역", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(0.9, 0.55, 0.55, 0.72))
+	draw_rect(Rect2(0, 0, BUILD_MIN_X, GROUND_TOP), Color(1, 1, 1, 0.035), true)
+	draw_line(Vector2(BUILD_MIN_X, 0), Vector2(BUILD_MIN_X, GROUND_TOP), Color(0.72, 0.72, 0.72, 0.55), 2.0)
+	draw_rect(Rect2(0, GROUND_TOP, WORLD_WIDTH, WORLD_HEIGHT - GROUND_TOP), Color("#282828"), true)
+	draw_line(Vector2(0, GROUND_TOP), Vector2(WORLD_WIDTH, GROUND_TOP), Color("#d0d0d0"), 2.0)
+	for collision in _get_platform_collision_shapes():
+		var points := _get_platform_polygon(collision)
+		if points.size() < 3:
+			continue
+		draw_colored_polygon(points, Color("#666666"))
+		var outline := PackedVector2Array(points)
+		outline.append(points[0])
+		draw_polyline(outline, Color("#e0e0e0"), 2.0, true)
 
 
 func _input(event: InputEvent) -> void:
+	if _is_escape_pressed(event):
+		get_viewport().set_input_as_handled()
+		get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
+		return
 	if not get_viewport().gui_is_dragging():
 		return
 	if not event is InputEventMouseButton or not event.pressed:
@@ -116,6 +127,15 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
+func _is_escape_pressed(event: InputEvent) -> bool:
+	return (
+		event is InputEventKey
+		and event.pressed
+		and not event.echo
+		and event.keycode == KEY_ESCAPE
+	)
+
+
 func pan_camera(horizontal_delta: float) -> void:
 	var half_view := VIEWPORT_WIDTH * 0.5
 	camera.position.x = clampf(camera.position.x + horizontal_delta, half_view, WORLD_WIDTH - half_view)
@@ -132,12 +152,10 @@ func can_place_from_screen(screen_position: Vector2, data: Variant) -> bool:
 		return false
 	var world_position := _screen_to_world(screen_position)
 	var half_extents := _get_rotated_half_extents(data)
-	var platform_top := _get_platform_world_rect().position.y
 	return (
 		world_position.x - half_extents.x >= BUILD_MIN_X
 		and world_position.x + half_extents.x <= WORLD_WIDTH
 		and world_position.y - half_extents.y >= 0.0
-		and world_position.y + half_extents.y <= platform_top + 3.0
 	)
 
 
@@ -169,33 +187,59 @@ func _screen_to_world(screen_position: Vector2) -> Vector2:
 
 
 func _get_platform_world_rect() -> Rect2:
+	var has_point := false
+	var minimum := Vector2.ZERO
+	var maximum := Vector2.ZERO
+	for collision in _get_platform_collision_shapes():
+		for point in _get_platform_polygon(collision):
+			if not has_point:
+				minimum = point
+				maximum = point
+				has_point = true
+			else:
+				minimum = minimum.min(point)
+				maximum = maximum.max(point)
+	if has_point:
+		return Rect2(minimum, maximum - minimum)
+	if tower_platform != null:
+		return Rect2(tower_platform.position, Vector2.ZERO)
+	return Rect2()
+
+
+func _get_platform_collision_shapes() -> Array[CollisionShape2D]:
+	var collisions: Array[CollisionShape2D] = []
 	if tower_platform == null:
-		return Rect2(1722, 520, 256, 24)
-	var collision := tower_platform.get_node_or_null("CollisionShape2D") as CollisionShape2D
+		return collisions
+	for child in tower_platform.get_children():
+		if (
+			child is CollisionShape2D
+			and not child.disabled
+			and child.shape is RectangleShape2D
+		):
+			collisions.append(child)
+	return collisions
+
+
+func _get_platform_polygon(collision: CollisionShape2D) -> PackedVector2Array:
 	if collision == null or not collision.shape is RectangleShape2D:
-		return Rect2(tower_platform.global_position - Vector2(128, 12), Vector2(256, 24))
+		return PackedVector2Array()
 	var rectangle := collision.shape as RectangleShape2D
 	var half := rectangle.size * 0.5
-	var corners := [
-		collision.global_transform * Vector2(-half.x, -half.y),
-		collision.global_transform * Vector2(half.x, -half.y),
-		collision.global_transform * Vector2(half.x, half.y),
-		collision.global_transform * Vector2(-half.x, half.y),
-	]
-	var minimum: Vector2 = corners[0]
-	var maximum: Vector2 = corners[0]
-	for corner in corners:
-		minimum = minimum.min(corner)
-		maximum = maximum.max(corner)
-	return Rect2(minimum, maximum - minimum)
+	var world_to_level := global_transform.affine_inverse()
+	return PackedVector2Array([
+		world_to_level * (collision.global_transform * Vector2(-half.x, -half.y)),
+		world_to_level * (collision.global_transform * Vector2(half.x, -half.y)),
+		world_to_level * (collision.global_transform * Vector2(half.x, half.y)),
+		world_to_level * (collision.global_transform * Vector2(-half.x, half.y)),
+	])
 
 
 func _get_rotated_half_extents(data: Dictionary) -> Vector2:
-	var half := Vector2(32, 32)
+	var half := Vector2(22.4, 22.4)
 	if data.get("item_kind", "block") == "pearl":
 		half = Vector2(20, 20)
 	else:
-		var dimensions := _get_shape_dimensions(int(data.get("shape_index", 0))) * 32.0
+		var dimensions := _get_shape_dimensions(int(data.get("shape_index", 0))) * 22.4
 		half = dimensions
 	var angle := float(data.get("rotation_steps", 0)) * ROTATION_STEP_RADIANS
 	var cosine := absf(cos(angle))
@@ -248,10 +292,23 @@ func _add_shop_item(
 	var item := BlockPaletteItem.new()
 	item.configure(scene_path, shape_index, material_index, display_name, item_kind)
 	item.configure_shop(scene_path, item_price, initial_count, purchasable)
+	if item_kind == "block":
+		item.tooltip_text += "\n%s" % _get_material_trait(material_index)
 	item.purchase_requested.connect(_on_purchase_requested)
 	palette.add_child(item)
 	inventory[scene_path] = initial_count
 	shop_items[scene_path] = item
+
+
+func _get_material_trait(material_index: int) -> String:
+	match material_index:
+		PhysicsBlock.BlockMaterial.WOOD:
+			return "가벼움 · 충격 감쇠가 빠름"
+		PhysicsBlock.BlockMaterial.STONE:
+			return "마찰력이 높아 기초에 안정적"
+		PhysicsBlock.BlockMaterial.METAL:
+			return "매우 무거움 · 미끄러지며 주변에 큰 충격"
+	return ""
 
 
 func _get_shape_area(shape_index: int) -> float:
@@ -264,18 +321,15 @@ func _get_shape_area(shape_index: int) -> float:
 
 func _on_purchase_requested(item_id_string: String) -> void:
 	if raid_started:
-		status_label.text = "레이드 중에는 구매할 수 없습니다."
 		return
 	var item := shop_items.get(item_id_string) as BlockPaletteItem
 	if item == null or not item.purchasable:
 		return
 	if balance < item.price:
-		status_label.text = "잔액이 부족합니다."
 		return
 	balance -= item.price
 	_change_inventory(item_id_string, 1)
 	_update_balance()
-	status_label.text = "%s 구매 완료" % item.display_name
 
 
 func _change_inventory(item_id_string: String, amount: int) -> void:
@@ -287,6 +341,178 @@ func _change_inventory(item_id_string: String, amount: int) -> void:
 
 func _update_balance() -> void:
 	balance_label.text = "잔액: %d" % balance
+
+
+func _save_block_layout() -> void:
+	if raid_started:
+		layout_status_label.text = "진행 중에는 저장할 수 없습니다"
+		return
+	var saved_blocks: Array[Dictionary] = []
+	for placed_object in placed_objects:
+		if not placed_object is PhysicsBlock or not is_instance_valid(placed_object):
+			continue
+		saved_blocks.append({
+			"material": int(placed_object.block_material),
+			"shape": int(placed_object.block_shape),
+			"position": [placed_object.global_position.x, placed_object.global_position.y],
+			"rotation": placed_object.global_rotation,
+			"flipped": placed_object.flipped_horizontally,
+		})
+	var file := FileAccess.open(layout_save_path, FileAccess.WRITE)
+	if file == null:
+		layout_status_label.text = "저장 실패"
+		return
+	file.store_string(JSON.stringify({"version": 1, "level": level_number, "blocks": saved_blocks}))
+	file.close()
+	layout_status_label.text = "블록 %d개 저장 완료" % saved_blocks.size()
+
+
+func _load_block_layout() -> void:
+	if raid_started:
+		layout_status_label.text = "진행 중에는 불러올 수 없습니다"
+		return
+	var saved_blocks: Variant = _read_saved_blocks()
+	if saved_blocks == null:
+		return
+	var required_counts: Variant = _count_required_blocks(saved_blocks)
+	if required_counts == null:
+		layout_status_label.text = "저장 파일이 올바르지 않습니다"
+		return
+	var available_counts := _get_available_block_counts_after_reclaim()
+	var missing_counts: Dictionary = {}
+	var required_cost := 0
+	for scene_path in required_counts:
+		var missing_count := maxi(
+			int(required_counts[scene_path]) - int(available_counts.get(scene_path, 0)),
+			0
+		)
+		if missing_count <= 0:
+			continue
+		var item := shop_items.get(scene_path) as BlockPaletteItem
+		if item == null or not item.purchasable:
+			layout_status_label.text = "저장 파일이 올바르지 않습니다"
+			return
+		missing_counts[scene_path] = missing_count
+		required_cost += item.price * missing_count
+	if required_cost > balance:
+		layout_status_label.text = "잔액 부족 · 필요 금액: %d" % required_cost
+		return
+
+	_reclaim_and_remove_all_placed_objects()
+	for scene_path in missing_counts:
+		_change_inventory(str(scene_path), int(missing_counts[scene_path]))
+	balance -= required_cost
+	var loaded_count := 0
+	for saved_block in saved_blocks:
+		if _restore_saved_block(saved_block):
+			loaded_count += 1
+	_update_balance()
+	layout_status_label.text = "블록 %d개 불러오기 완료 · 사용 금액: %d" % [
+		loaded_count, required_cost
+	]
+
+
+func _read_saved_blocks() -> Variant:
+	if not FileAccess.file_exists(layout_save_path):
+		layout_status_label.text = "저장된 배치가 없습니다"
+		return null
+	var file := FileAccess.open(layout_save_path, FileAccess.READ)
+	if file == null:
+		layout_status_label.text = "불러오기 실패"
+		return null
+	var json := JSON.new()
+	var parse_result := json.parse(file.get_as_text())
+	file.close()
+	if parse_result != OK or not json.data is Dictionary:
+		layout_status_label.text = "저장 파일이 올바르지 않습니다"
+		return null
+	var saved_blocks: Variant = json.data.get("blocks", [])
+	if not saved_blocks is Array:
+		layout_status_label.text = "저장 파일이 올바르지 않습니다"
+		return null
+	return saved_blocks
+
+
+func _count_required_blocks(saved_blocks: Array) -> Variant:
+	var required_counts: Dictionary = {}
+	for saved_block in saved_blocks:
+		var scene_path := _get_saved_block_scene_path(saved_block)
+		if scene_path.is_empty():
+			return null
+		required_counts[scene_path] = int(required_counts.get(scene_path, 0)) + 1
+	return required_counts
+
+
+func _get_available_block_counts_after_reclaim() -> Dictionary:
+	var available_counts: Dictionary = {}
+	for scene_path in shop_items:
+		var item := shop_items[scene_path] as BlockPaletteItem
+		if item != null and item.purchasable:
+			available_counts[scene_path] = int(inventory.get(scene_path, 0))
+	for placed_object in placed_objects:
+		if not placed_object is PhysicsBlock or not is_instance_valid(placed_object):
+			continue
+		var scene_path := str(placed_object.get_meta("inventory_item_id", ""))
+		if not scene_path.is_empty():
+			available_counts[scene_path] = int(available_counts.get(scene_path, 0)) + 1
+	return available_counts
+
+
+func _get_saved_block_scene_path(saved_block: Variant) -> String:
+	if not saved_block is Dictionary:
+		return ""
+	var material_index := int(saved_block.get("material", -1))
+	var shape_index := int(saved_block.get("shape", -1))
+	if material_index < 0 or material_index >= MATERIAL_FILES.size():
+		return ""
+	if shape_index < 0 or shape_index >= SHAPE_FILES.size():
+		return ""
+	return "res://blocks/%s_%s.tscn" % [
+		MATERIAL_FILES[material_index], SHAPE_FILES[shape_index]
+	]
+
+
+func _restore_saved_block(saved_block: Variant) -> bool:
+	var scene_path := _get_saved_block_scene_path(saved_block)
+	if scene_path.is_empty():
+		return false
+	var position_data: Variant = saved_block.get("position", [])
+	if not position_data is Array or position_data.size() < 2:
+		return false
+	if int(inventory.get(scene_path, 0)) <= 0:
+		return false
+	var packed_scene := load(scene_path) as PackedScene
+	if packed_scene == null:
+		return false
+	var block := packed_scene.instantiate() as PhysicsBlock
+	if block == null:
+		return false
+	block.flipped_horizontally = bool(saved_block.get("flipped", false))
+	world.add_child(block)
+	block.global_position = Vector2(float(position_data[0]), float(position_data[1]))
+	block.global_rotation = float(saved_block.get("rotation", 0.0))
+	block.reset_physics_interpolation()
+	block.set_meta("inventory_item_id", scene_path)
+	block.input_pickable = true
+	block.input_event.connect(_on_placed_object_input.bind(block))
+	placed_objects.append(block)
+	block.tree_exiting.connect(_on_placed_object_removed.bind(block))
+	_change_inventory(scene_path, -1)
+	return true
+
+
+func _reclaim_and_remove_all_placed_objects() -> void:
+	var objects_to_remove := placed_objects.duplicate()
+	placed_objects.clear()
+	for placed_object in objects_to_remove:
+		if not is_instance_valid(placed_object):
+			continue
+		var item_id_string := str(placed_object.get_meta("inventory_item_id", ""))
+		if not item_id_string.is_empty():
+			_change_inventory(item_id_string, 1)
+		if placed_object.get_parent() != null:
+			placed_object.get_parent().remove_child(placed_object)
+		placed_object.queue_free()
 
 
 func _on_placed_object_input(
@@ -314,25 +540,17 @@ func _on_placed_object_removed(placed_object: CollisionObject2D) -> void:
 
 
 func _on_raid_button_pressed() -> void:
-	if raid_finished:
-		return
-	if raid_started:
-		raid_paused = not raid_paused
-		Engine.time_scale = 0.0 if raid_paused else 1.0
-		camera.position_smoothing_enabled = not raid_paused
-		camera.reset_smoothing()
-		camera.force_update_scroll()
-		start_button.text = "계속" if raid_paused else "일시정지"
-		status_label.text = "레이드 일시정지" if raid_paused else "레이드 진행 중"
+	if raid_finished or raid_started:
 		return
 	var pearls := _get_level_pearls()
 	if pearls.is_empty():
-		status_label.text = "진주를 먼저 배치해야 합니다."
 		return
 	raid_started = true
-	start_button.text = "일시정지"
-	status_label.text = "레이드 진행 중"
-	catapult.start_raid()
+	start_button.text = "진행 중"
+	start_button.disabled = true
+	save_layout_button.disabled = true
+	load_layout_button.disabled = true
+	_start_attack_sequence()
 
 
 func _get_level_pearls() -> Array[Pearl]:
@@ -344,7 +562,8 @@ func _get_level_pearls() -> Array[Pearl]:
 
 
 func _on_catapult_raid_finished() -> void:
-	status_label.text = "마지막 충격을 확인하는 중..."
+	if raid_finished:
+		return
 	await get_tree().create_timer(5.0).timeout
 	_finish_raid()
 
@@ -353,15 +572,12 @@ func _finish_raid(force_failure := false) -> void:
 	if raid_finished:
 		return
 	raid_finished = true
-	raid_paused = false
-	Engine.time_scale = 1.0
-	camera.position_smoothing_enabled = true
+	_stop_attack_sequence()
 	start_button.disabled = true
 	var pearls := _get_level_pearls()
 	var success := not force_failure and not pearls.is_empty()
-	var success_max_y := _get_platform_world_rect().position.y + SUCCESS_HEIGHT_MARGIN
 	for pearl in pearls:
-		if pearl.global_position.y >= success_max_y:
+		if not _is_pearl_above_platform(pearl):
 			success = false
 			break
 	result_overlay.show()
@@ -370,13 +586,56 @@ func _finish_raid(force_failure := false) -> void:
 		result_button.text = "다음 레벨" if level_number < 3 else "메인 화면"
 		result_button.set_meta("success", true)
 	else:
-		result_text.text = "진주 보호 실패"
+		result_text.text = "실패"
 		result_button.text = "다시 시도"
 		result_button.set_meta("success", false)
 
 
+func _is_pearl_above_platform(pearl: Pearl) -> bool:
+	if pearl == null or not is_instance_valid(pearl):
+		return false
+	var pearl_position := global_transform.affine_inverse() * pearl.global_position
+	for collision in _get_platform_collision_shapes():
+		var polygon := _get_platform_polygon(collision)
+		if polygon.size() < 3:
+			continue
+		var minimum_x := polygon[0].x
+		var maximum_x := polygon[0].x
+		for point in polygon:
+			minimum_x = minf(minimum_x, point.x)
+			maximum_x = maxf(maximum_x, point.x)
+		if (
+			pearl_position.x < minimum_x - Pearl.RADIUS
+			or pearl_position.x > maximum_x + Pearl.RADIUS
+		):
+			continue
+		var sample_x := clampf(pearl_position.x, minimum_x, maximum_x)
+		var surface_y := _get_polygon_top_y_at_x(polygon, sample_x)
+		if surface_y < INF and pearl_position.y < surface_y + SUCCESS_HEIGHT_MARGIN:
+			return true
+	return false
+
+
+func _get_polygon_top_y_at_x(polygon: PackedVector2Array, sample_x: float) -> float:
+	var top_y := INF
+	for index in polygon.size():
+		var first := polygon[index]
+		var second := polygon[(index + 1) % polygon.size()]
+		var edge_min_x := minf(first.x, second.x)
+		var edge_max_x := maxf(first.x, second.x)
+		if sample_x < edge_min_x - 0.001 or sample_x > edge_max_x + 0.001:
+			continue
+		if is_equal_approx(first.x, second.x):
+			if is_equal_approx(sample_x, first.x):
+				top_y = minf(top_y, minf(first.y, second.y))
+			continue
+		var ratio := (sample_x - first.x) / (second.x - first.x)
+		var intersection_y := lerpf(first.y, second.y, ratio)
+		top_y = minf(top_y, intersection_y)
+	return top_y
+
+
 func _on_result_button_pressed() -> void:
-	Engine.time_scale = 1.0
 	var success := bool(result_button.get_meta("success", false))
 	if not success:
 		get_tree().reload_current_scene()
@@ -384,3 +643,77 @@ func _on_result_button_pressed() -> void:
 		get_tree().change_scene_to_file("res://scenes/level_%d.tscn" % (level_number + 1))
 	else:
 		get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
+
+
+func _setup_attack_sequence() -> void:
+	catapults.clear()
+	for candidate in get_tree().get_nodes_in_group("catapults"):
+		if candidate is Catapult and world.is_ancestor_of(candidate):
+			candidate.stop_raid()
+			candidate.auto_start = false
+			catapults.append(candidate)
+	catapults.sort_custom(_sort_catapults_bottom_to_top)
+	_attack_timer = Timer.new()
+	_attack_timer.one_shot = true
+	_attack_timer.timeout.connect(_fire_next_catapult)
+	add_child(_attack_timer)
+
+
+func _sort_catapults_bottom_to_top(first: Catapult, second: Catapult) -> bool:
+	return first.global_position.y > second.global_position.y
+
+
+func _start_attack_sequence() -> void:
+	_remaining_catapult_shots.clear()
+	_remaining_bomb_shots.clear()
+	_next_catapult_index = 0
+	for current_catapult in catapults:
+		_remaining_catapult_shots.append(maxi(0, current_catapult.projectile_count))
+		_remaining_bomb_shots.append(maxi(0, current_catapult.bomb_projectile_count))
+	if not _has_remaining_catapult_shots():
+		_on_catapult_raid_finished()
+		return
+	_attack_timer.start(maxf(0.1, catapults[0].fire_interval))
+
+
+func _fire_next_catapult() -> void:
+	if raid_finished or catapults.is_empty():
+		return
+	var chosen_index := -1
+	for offset in catapults.size():
+		var candidate_index := (_next_catapult_index + offset) % catapults.size()
+		if (
+			_remaining_bomb_shots[candidate_index] > 0
+			or _remaining_catapult_shots[candidate_index] > 0
+		):
+			chosen_index = candidate_index
+			break
+	if chosen_index < 0:
+		_on_catapult_raid_finished()
+		return
+	var firing_catapult := catapults[chosen_index]
+	var use_bomb := _remaining_bomb_shots[chosen_index] > 0
+	firing_catapult.fire_once(use_bomb)
+	if use_bomb:
+		_remaining_bomb_shots[chosen_index] -= 1
+	else:
+		_remaining_catapult_shots[chosen_index] -= 1
+	_next_catapult_index = (chosen_index + 1) % catapults.size()
+	if not _has_remaining_catapult_shots():
+		_on_catapult_raid_finished()
+		return
+	_attack_timer.start(maxf(0.1, firing_catapult.fire_interval))
+
+
+func _has_remaining_catapult_shots() -> bool:
+	for index in _remaining_catapult_shots.size():
+		if _remaining_bomb_shots[index] > 0 or _remaining_catapult_shots[index] > 0:
+			return true
+	return false
+
+
+func _stop_attack_sequence() -> void:
+	if _attack_timer != null:
+		_attack_timer.stop()
+	for current_catapult in catapults:
+		current_catapult.stop_raid()

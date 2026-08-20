@@ -1,7 +1,7 @@
 class_name BlockDragPreview
 extends Control
 
-const PREVIEW_UNIT := 64.0
+const PREVIEW_UNIT := 44.8
 
 var shape_index := 0
 var material_index := 0
@@ -18,6 +18,7 @@ func configure(new_shape_index: int, new_material_index: int, new_preview_kind :
 	size = Vector2(280, 280)
 	position = -size * 0.5
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
 	queue_redraw()
 
 
@@ -39,30 +40,25 @@ func _draw() -> void:
 		_draw_catapult()
 		return
 	var points := _get_polygon()
-	var color: Color = PhysicsBlock.MATERIAL_COLORS[material_index]
-	draw_colored_polygon(points, color)
+	var texture: Texture2D = PhysicsBlock.MATERIAL_TEXTURES[material_index]
+	draw_colored_polygon(points, Color.WHITE, _get_texture_uvs(), texture)
 	var outline := PackedVector2Array(points)
 	outline.append(points[0])
-	draw_polyline(outline, color.lightened(0.3), 3.0, true)
+	draw_polyline(outline, Color("#b8b8b8"), 2.0, true)
 
 
 func _draw_pearl() -> void:
 	var center := size * 0.5
-	draw_circle(center, 20.0, Color("#ddd5f4"))
-	draw_circle(center + Vector2(-6, -7), 5.0, Color(1, 1, 1, 0.72))
-	draw_arc(center, 20.0, 0.0, TAU, 32, Color("#fffaf0"), 2.0, true)
+	var radius := Pearl.RADIUS
+	var destination := Rect2(center - Vector2.ONE * radius, Vector2.ONE * radius * 2.0)
+	draw_texture_rect_region(Pearl.TEXTURE, destination, Pearl.TEXTURE_REGION)
 
 
 func _draw_catapult() -> void:
 	var center := size * 0.5
 	var transform := Transform2D(angle_radians, center)
 	draw_set_transform_matrix(transform)
-	draw_rect(Rect2(-24, 8, 48, 14), Color("#8f5929"), true)
-	draw_circle(Vector2(-16, 21), 7.0, Color("#343941"))
-	draw_circle(Vector2(16, 21), 7.0, Color("#343941"))
-	draw_line(Vector2(0, 10), Vector2(25, -25), Color("#bd7d3e"), 6.0, true)
-	draw_circle(Vector2.ZERO, 5.0, Color("#4a5059"))
-	draw_circle(Vector2(27, -27), 6.0, Color("#59606a"))
+	draw_texture_rect_region(Catapult.TEXTURE, Catapult.VISUAL_RECT, Catapult.TEXTURE_REGION)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
@@ -109,3 +105,19 @@ func _get_dimensions() -> Vector2:
 		PhysicsBlock.BlockShape.SLOPE:
 			return Vector2(3.0, 2.0)
 	return Vector2.ONE
+
+
+func _get_texture_uvs() -> PackedVector2Array:
+	var dimensions := _get_dimensions()
+	if shape_index == PhysicsBlock.BlockShape.SLOPE:
+		return PackedVector2Array([
+			Vector2(0.0, dimensions.y),
+			dimensions,
+			Vector2(dimensions.x, 0.0),
+		])
+	return PackedVector2Array([
+		Vector2.ZERO,
+		Vector2(dimensions.x, 0.0),
+		dimensions,
+		Vector2(0.0, dimensions.y),
+	])

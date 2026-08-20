@@ -11,26 +11,38 @@ config_version=5
 [application]
 
 config/name="2D Game Project"
+config/version="1.0"
 run/main_scene="res://scenes/main_menu.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
-config/icon="res://icon.svg"
+config/icon="uid://b4m4dh847ro3o"
 
 [display]
 
-window/size/viewport_width=1280
-window/size/viewport_height=720
-window/size/window_width_override=1280
-window/size/window_height_override=720
+window/size/viewport_width=2560
+window/size/viewport_height=1440
+window/size/mode=3
+window/size/window_width_override=2560
+window/size/window_height_override=1440
 window/stretch/mode="canvas_items"
+
+[gui]
+
+theme/custom="res://themes/monochrome_theme.tres"
+
+[layer_names]
+
+2d_physics/layer_1="Gameplay"
+2d_physics/layer_2="Destruction Debris"
 
 [physics]
 
-common/physics_interpolation=true
 common/physics_ticks_per_second=120
 3d/physics_engine="Jolt Physics"
+common/physics_interpolation=true
 
 [rendering]
 
+textures/canvas_textures/default_texture_filter=0
 rendering_device/driver.windows="d3d12"
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
