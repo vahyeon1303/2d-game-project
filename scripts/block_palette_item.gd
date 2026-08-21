@@ -3,6 +3,8 @@ extends PanelContainer
 
 signal purchase_requested(item_id: String)
 
+const MORTAR_SCRIPT := preload("res://scripts/mortar.gd")
+
 var scene_path := ""
 var shape_index := 0
 var material_index := 0
@@ -124,6 +126,8 @@ func _draw() -> void:
 		_draw_pearl_icon()
 	elif item_kind == "catapult":
 		_draw_catapult_icon()
+	elif item_kind == "mortar":
+		_draw_mortar_icon()
 	else:
 		var points := _get_icon_polygon()
 		var texture: Texture2D = PhysicsBlock.MATERIAL_TEXTURES[material_index]
@@ -147,6 +151,17 @@ func _draw_catapult_icon() -> void:
 	var center := Vector2(size.x * 0.5, size.y * 0.55)
 	var destination := Rect2(center - icon_size * 0.5, icon_size)
 	draw_texture_rect_region(Catapult.TEXTURE, destination, Catapult.TEXTURE_REGION)
+
+
+func _draw_mortar_icon() -> void:
+	var icon_size: Vector2 = MORTAR_SCRIPT.MORTAR_VISUAL_SIZE * (
+		124.0 / MORTAR_SCRIPT.MORTAR_VISUAL_SIZE.y
+	)
+	var center := Vector2(size.x * 0.5, size.y * 0.52)
+	var destination := Rect2(center - icon_size * 0.5, icon_size)
+	draw_texture_rect_region(
+		MORTAR_SCRIPT.MORTAR_TEXTURE, destination, MORTAR_SCRIPT.MORTAR_TEXTURE_REGION
+	)
 
 
 func _get_drag_data(_at_position: Vector2) -> Variant:

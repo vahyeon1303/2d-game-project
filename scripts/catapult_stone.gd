@@ -17,6 +17,8 @@ const SMOKE_TEXTURES: Array[Texture2D] = [
 const SMOKE_COLUMNS := [8, 16, 16]
 const SMOKE_FRAME_COUNTS := [63, 145, 197]
 
+@export_range(0.1, 60.0, 0.1, "or_greater") var lifetime_seconds := LIFETIME_SECONDS
+
 var previous_linear_velocity := Vector2.ZERO
 var _last_smoke_msec := -SMOKE_COOLDOWN_MSEC
 
@@ -26,7 +28,7 @@ func _ready() -> void:
 	body_entered.connect(_on_body_entered)
 	previous_linear_velocity = linear_velocity
 	queue_redraw()
-	get_tree().create_timer(LIFETIME_SECONDS).timeout.connect(queue_free)
+	get_tree().create_timer(maxf(lifetime_seconds, 0.1)).timeout.connect(queue_free)
 
 
 func _physics_process(_delta: float) -> void:

@@ -154,6 +154,10 @@ func _create_palette() -> void:
 	catapult_item.configure("res://objects/catapult.tscn", 0, 0, "투석기", "catapult")
 	palette.add_child(catapult_item)
 
+	var mortar_item := BlockPaletteItem.new()
+	mortar_item.configure("res://objects/mortar.tscn", 0, 0, "박격포", "mortar")
+	palette.add_child(mortar_item)
+
 	for material_index in MATERIAL_FILES.size():
 		for shape_index in SHAPE_FILES.size():
 			var item := BlockPaletteItem.new()

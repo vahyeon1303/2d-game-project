@@ -13,15 +13,24 @@ const WORLD_WIDTH := 4800.0
 const WORLD_HEIGHT := 1440.0
 const VIEWPORT_WIDTH := 2560.0
 const GROUND_TOP := 1240.0
+const FALLEN_BLOCK_REMOVAL_Y := GROUND_TOP - 2.0
 const BUILD_MIN_X := 1520.0
 const UI_TOP := 1209.0
-const SUCCESS_HEIGHT_MARGIN := 55.0
+const STRUCTURE_FACE_THRESHOLDS := [0.8, 0.7, 0.6, 0.5, 0.4]
+const STRUCTURE_SCORE_LABELS := ["매우 훌륭함", "훌륭함", "보통", "못함", "매우 못함"]
+const STRUCTURE_FACE_TEXTURES: Array[Texture2D] = [
+	preload("res://Asset/Face/Verry Good.png"),
+	preload("res://Asset/Face/Good.png"),
+	preload("res://Asset/Face/Not Bad.png"),
+	preload("res://Asset/Face/Bad.png"),
+	preload("res://Asset/Face/Very Bad.png"),
+]
 
 @export_range(1, 3, 1) var level_number := 1
 @export var starting_balance := 500
 @export_category("승패 설정")
-## Godot에서는 화면 아래쪽일수록 Y값이 커집니다. 진주가 이 값 이상이면 즉시 실패합니다.
-@export var pearl_game_over_y: float = 1240.0
+## 진주의 전체 원이 이 월드 Y 경계 아래로 벗어나면 제거하고 즉시 실패합니다.
+@export var pearl_game_over_y: float = WORLD_HEIGHT
 
 @onready var world: Node2D = %World
 @onready var camera: Camera2D = %Camera2D
@@ -30,11 +39,14 @@ const SUCCESS_HEIGHT_MARGIN := 55.0
 @onready var palette: HBoxContainer = %Palette
 @onready var balance_label: Label = %BalanceLabel
 @onready var start_button: Button = %RaidButton
+@onready var structure_face_panel: PanelContainer = %StructureFacePanel
+@onready var structure_face_texture: TextureRect = %StructureFaceTexture
 @onready var save_layout_button: Button = %SaveLayoutButton
 @onready var load_layout_button: Button = %LoadLayoutButton
 @onready var layout_status_label: Label = %LayoutStatusLabel
 @onready var result_overlay: Control = %ResultOverlay
 @onready var result_text: Label = %ResultText
+@onready var result_score_label: Label = %ResultScoreLabel
 @onready var result_button: Button = %ResultButton
 
 var balance := 0
@@ -49,6 +61,8 @@ var _remaining_bomb_shots: Array[int] = []
 var _next_catapult_index := 0
 var _attack_timer: Timer
 var layout_save_path := ""
+var initial_placed_block_count := 0
+var _current_structure_face_index := -1
 
 
 func _ready() -> void:
@@ -64,9 +78,14 @@ func _ready() -> void:
 	load_layout_button.pressed.connect(_load_block_layout)
 	result_button.pressed.connect(_on_result_button_pressed)
 	result_overlay.hide()
+	result_score_label.hide()
+	structure_face_panel.hide()
 	queue_redraw()
 
 func _physics_process(_delta: float) -> void:
+	if raid_started:
+		_remove_fallen_blocks()
+		_update_structure_face()
 	if not raid_started or raid_finished:
 		return
 	var pearls := _get_level_pearls()
@@ -75,7 +94,8 @@ func _physics_process(_delta: float) -> void:
 		_finish_raid(true)
 		return
 	for pearl in pearls:
-		if pearl.global_position.y >= pearl_game_over_y:
+		if _is_pearl_outside_play_area(pearl):
+			pearl.queue_free()
 			_stop_attack_sequence()
 			_finish_raid(true)
 			return
@@ -545,6 +565,10 @@ func _on_raid_button_pressed() -> void:
 	var pearls := _get_level_pearls()
 	if pearls.is_empty():
 		return
+	initial_placed_block_count = _count_current_placed_blocks()
+	_current_structure_face_index = -1
+	structure_face_panel.show()
+	_update_structure_face()
 	raid_started = true
 	start_button.text = "진행 중"
 	start_button.disabled = true
@@ -553,12 +577,102 @@ func _on_raid_button_pressed() -> void:
 	_start_attack_sequence()
 
 
+func _count_current_placed_blocks() -> int:
+	var block_count := 0
+	for placed_object in placed_objects:
+		if (
+			placed_object is PhysicsBlock
+			and is_instance_valid(placed_object)
+			and not placed_object.is_queued_for_deletion()
+		):
+			block_count += 1
+	return block_count
+
+
+func _remove_fallen_blocks() -> void:
+	for placed_object in placed_objects:
+		if (
+			not placed_object is PhysicsBlock
+			or not is_instance_valid(placed_object)
+			or placed_object.is_queued_for_deletion()
+		):
+			continue
+		var block := placed_object as PhysicsBlock
+		if _get_block_lowest_world_y(block) < FALLEN_BLOCK_REMOVAL_Y:
+			continue
+		block.queue_free()
+
+
+func _get_block_lowest_world_y(block: PhysicsBlock) -> float:
+	if block == null or not is_instance_valid(block):
+		return -INF
+	var collision := block.get_node_or_null("CollisionShape2D") as CollisionShape2D
+	if collision == null or collision.shape == null:
+		return block.global_position.y
+	var polygon := collision.shape as ConvexPolygonShape2D
+	if polygon == null or polygon.points.is_empty():
+		return block.global_position.y
+	var lowest_y := -INF
+	for point in polygon.points:
+		lowest_y = maxf(lowest_y, (collision.global_transform * point).y)
+	return lowest_y
+
+
+func _update_structure_face() -> void:
+	if not structure_face_panel.visible:
+		return
+	var current_block_count := _count_current_placed_blocks()
+	var remaining_ratio := _get_remaining_block_ratio(current_block_count)
+	var face_index := _get_structure_score_index(remaining_ratio)
+	if face_index != _current_structure_face_index:
+		_current_structure_face_index = face_index
+		structure_face_texture.texture = STRUCTURE_FACE_TEXTURES[face_index]
+	structure_face_panel.tooltip_text = "남은 블록: %d / %d (%d%%)" % [
+		current_block_count,
+		initial_placed_block_count,
+		roundi(remaining_ratio * 100.0),
+	]
+
+
+func _get_remaining_block_ratio(current_block_count := -1) -> float:
+	var resolved_count := (
+		_count_current_placed_blocks() if current_block_count < 0 else current_block_count
+	)
+	if initial_placed_block_count <= 0:
+		return 0.0
+	return clampf(float(resolved_count) / float(initial_placed_block_count), 0.0, 1.0)
+
+
+func _get_structure_score_index(remaining_ratio: float) -> int:
+	for index in STRUCTURE_FACE_THRESHOLDS.size():
+		if remaining_ratio >= STRUCTURE_FACE_THRESHOLDS[index]:
+			return index
+	return STRUCTURE_SCORE_LABELS.size() - 1
+
+
 func _get_level_pearls() -> Array[Pearl]:
 	var pearls: Array[Pearl] = []
 	for candidate in get_tree().get_nodes_in_group("pearls"):
-		if candidate is Pearl and is_instance_valid(candidate) and world.is_ancestor_of(candidate):
+		if (
+			candidate is Pearl
+			and is_instance_valid(candidate)
+			and not candidate.is_queued_for_deletion()
+			and world.is_ancestor_of(candidate)
+		):
 			pearls.append(candidate)
 	return pearls
+
+
+func _is_pearl_outside_play_area(pearl: Pearl) -> bool:
+	if pearl == null or not is_instance_valid(pearl) or pearl.is_queued_for_deletion():
+		return true
+	var pearl_position := world.global_transform.affine_inverse() * pearl.global_position
+	return (
+		pearl_position.x + Pearl.RADIUS < 0.0
+		or pearl_position.x - Pearl.RADIUS > WORLD_WIDTH
+		or pearl_position.y + Pearl.RADIUS < 0.0
+		or pearl_position.y - Pearl.RADIUS > pearl_game_over_y
+	)
 
 
 func _on_catapult_raid_finished() -> void:
@@ -577,63 +691,22 @@ func _finish_raid(force_failure := false) -> void:
 	var pearls := _get_level_pearls()
 	var success := not force_failure and not pearls.is_empty()
 	for pearl in pearls:
-		if not _is_pearl_above_platform(pearl):
+		if _is_pearl_outside_play_area(pearl):
 			success = false
 			break
 	result_overlay.show()
 	if success:
+		var score_index := _get_structure_score_index(_get_remaining_block_ratio())
 		result_text.text = "레벨 %d 성공!" % level_number
+		result_score_label.text = STRUCTURE_SCORE_LABELS[score_index]
+		result_score_label.show()
 		result_button.text = "다음 레벨" if level_number < 3 else "메인 화면"
 		result_button.set_meta("success", true)
 	else:
 		result_text.text = "실패"
+		result_score_label.hide()
 		result_button.text = "다시 시도"
 		result_button.set_meta("success", false)
-
-
-func _is_pearl_above_platform(pearl: Pearl) -> bool:
-	if pearl == null or not is_instance_valid(pearl):
-		return false
-	var pearl_position := global_transform.affine_inverse() * pearl.global_position
-	for collision in _get_platform_collision_shapes():
-		var polygon := _get_platform_polygon(collision)
-		if polygon.size() < 3:
-			continue
-		var minimum_x := polygon[0].x
-		var maximum_x := polygon[0].x
-		for point in polygon:
-			minimum_x = minf(minimum_x, point.x)
-			maximum_x = maxf(maximum_x, point.x)
-		if (
-			pearl_position.x < minimum_x - Pearl.RADIUS
-			or pearl_position.x > maximum_x + Pearl.RADIUS
-		):
-			continue
-		var sample_x := clampf(pearl_position.x, minimum_x, maximum_x)
-		var surface_y := _get_polygon_top_y_at_x(polygon, sample_x)
-		if surface_y < INF and pearl_position.y < surface_y + SUCCESS_HEIGHT_MARGIN:
-			return true
-	return false
-
-
-func _get_polygon_top_y_at_x(polygon: PackedVector2Array, sample_x: float) -> float:
-	var top_y := INF
-	for index in polygon.size():
-		var first := polygon[index]
-		var second := polygon[(index + 1) % polygon.size()]
-		var edge_min_x := minf(first.x, second.x)
-		var edge_max_x := maxf(first.x, second.x)
-		if sample_x < edge_min_x - 0.001 or sample_x > edge_max_x + 0.001:
-			continue
-		if is_equal_approx(first.x, second.x):
-			if is_equal_approx(sample_x, first.x):
-				top_y = minf(top_y, minf(first.y, second.y))
-			continue
-		var ratio := (sample_x - first.x) / (second.x - first.x)
-		var intersection_y := lerpf(first.y, second.y, ratio)
-		top_y = minf(top_y, intersection_y)
-	return top_y
-
 
 func _on_result_button_pressed() -> void:
 	var success := bool(result_button.get_meta("success", false))

@@ -2,6 +2,7 @@ class_name BlockDragPreview
 extends Control
 
 const PREVIEW_UNIT := 44.8
+const MORTAR_SCRIPT := preload("res://scripts/mortar.gd")
 
 var shape_index := 0
 var material_index := 0
@@ -39,6 +40,9 @@ func _draw() -> void:
 	if preview_kind == "catapult":
 		_draw_catapult()
 		return
+	if preview_kind == "mortar":
+		_draw_mortar()
+		return
 	var points := _get_polygon()
 	var texture: Texture2D = PhysicsBlock.MATERIAL_TEXTURES[material_index]
 	draw_colored_polygon(points, Color.WHITE, _get_texture_uvs(), texture)
@@ -59,6 +63,18 @@ func _draw_catapult() -> void:
 	var transform := Transform2D(angle_radians, center)
 	draw_set_transform_matrix(transform)
 	draw_texture_rect_region(Catapult.TEXTURE, Catapult.VISUAL_RECT, Catapult.TEXTURE_REGION)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+func _draw_mortar() -> void:
+	var center := size * 0.5
+	var transform := Transform2D(angle_radians, center)
+	draw_set_transform_matrix(transform)
+	draw_texture_rect_region(
+		MORTAR_SCRIPT.MORTAR_TEXTURE,
+		MORTAR_SCRIPT.MORTAR_VISUAL_RECT,
+		MORTAR_SCRIPT.MORTAR_TEXTURE_REGION
+	)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 

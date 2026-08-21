@@ -2,13 +2,14 @@
 
 [ext_resource type="PackedScene" uid="uid://b2bhec147j2bw" path="res://scenes/level_1.tscn" id="1_level"]
 [ext_resource type="PackedScene" path="res://objects/catapult.tscn" id="2_catapult"]
+[ext_resource type="PackedScene" path="res://objects/mortar.tscn" id="3_mortar"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape_platform"]
 size = Vector2(307.75, 420)
 
 [node name="Level3" unique_id=1075183369 instance=ExtResource("1_level")]
 level_number = 3
-starting_balance = 1000
+starting_balance = 350
 
 [node name="Ground" parent="World" parent_id_path=PackedInt32Array(37528343) index="0" unique_id=1977239935]
 collision_layer = 1
@@ -58,6 +59,16 @@ bomb_explosion_force = 7500.0
 
 [node name="Catapult3" parent="World" parent_id_path=PackedInt32Array(37528343) index="5" unique_id=781996912 instance=ExtResource("2_catapult")]
 position = Vector2(440, 368)
+launch_power = 300.0
+fire_interval = 5.0
+projectile_mass = 6.0
+projectile_count = 8
+auto_start = false
+bomb_projectile_count = 4
+bomb_explosion_force = 7500.0
+
+[node name="Mortar" parent="World" parent_id_path=PackedInt32Array(37528343) index="6" unique_id=1508380633 instance=ExtResource("3_mortar")]
+position = Vector2(440, 128)
 launch_power = 300.0
 fire_interval = 5.0
 projectile_mass = 6.0
