@@ -22,6 +22,16 @@ var _price_label: Label
 var _count_label: Label
 
 
+func _ready() -> void:
+	mouse_entered.connect(_play_hover_sound)
+
+
+func _play_hover_sound() -> void:
+	var button_sfx := get_node_or_null("/root/ButtonSfx")
+	if button_sfx != null:
+		button_sfx.call("play_hover_sound")
+
+
 func configure(
 	new_scene_path: String,
 	new_shape_index: int,

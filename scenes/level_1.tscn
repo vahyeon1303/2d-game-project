@@ -224,6 +224,34 @@ mouse_filter = 2
 expand_mode = 1
 stretch_mode = 5
 
+[node name="AmmunitionPanel" type="PanelContainer" parent="HUD"]
+unique_name_in_owner = true
+visible = false
+offset_left = 40.0
+offset_top = 180.0
+offset_right = 40.0
+offset_bottom = 180.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBox_structure_face")
+
+[node name="AmmunitionLayout" type="VBoxContainer" parent="HUD/AmmunitionPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="NormalAmmoLabel" type="Label" parent="HUD/AmmunitionPanel/AmmunitionLayout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "일반 탄환: 0"
+vertical_alignment = 1
+
+[node name="BombAmmoLabel" type="Label" parent="HUD/AmmunitionPanel/AmmunitionLayout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "폭탄 탄환: 0"
+vertical_alignment = 1
+
 [node name="Shop" type="PanelContainer" parent="HUD" unique_id=1980667115]
 anchors_preset = 12
 anchor_top = 1.0

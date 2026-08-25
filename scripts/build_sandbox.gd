@@ -56,11 +56,6 @@ func _ready() -> void:
 
 
 func _draw() -> void:
-	var grid_color := Color(1, 1, 1, 0.1)
-	for x in range(0, int(size.x) + 1, 32):
-		draw_line(Vector2(x, 0), Vector2(x, BUILD_AREA_BOTTOM), grid_color, 1.0)
-	for y in range(0, int(BUILD_AREA_BOTTOM) + 1, 32):
-		draw_line(Vector2(0, y), Vector2(size.x, y), grid_color, 1.0)
 	draw_rect(Rect2(0, GROUND_TOP, size.x, 32), Color("#4a4a4a"))
 	draw_line(Vector2(0, GROUND_TOP), Vector2(size.x, GROUND_TOP), Color("#d0d0d0"), 4.0)
 
@@ -135,6 +130,7 @@ func _drop_data(at_position: Vector2, data: Variant) -> void:
 	placed_object.reset_physics_interpolation()
 	_register_placed_object(placed_object)
 	_update_block_count()
+	_play_ui_pop_sound()
 
 
 func _register_placed_object(placed_object: Node2D) -> void:
@@ -262,7 +258,14 @@ func _on_placed_object_input(
 	placed_objects.erase(placed_object)
 	placed_object.queue_free()
 	_update_block_count()
+	_play_ui_pop_sound()
 	get_viewport().set_input_as_handled()
+
+
+func _play_ui_pop_sound() -> void:
+	var button_sfx := get_node_or_null("/root/ButtonSfx")
+	if button_sfx != null:
+		button_sfx.call("play_click_sound")
 
 
 func _save_block_layout() -> void:

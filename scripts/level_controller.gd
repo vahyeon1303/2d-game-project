@@ -18,6 +18,10 @@ const BUILD_MIN_X := 1520.0
 const UI_TOP := 1209.0
 const STRUCTURE_FACE_THRESHOLDS := [0.8, 0.7, 0.6, 0.5, 0.4]
 const STRUCTURE_SCORE_LABELS := ["매우 훌륭함", "훌륭함", "보통", "못함", "매우 못함"]
+const CLEAR_SOUND := preload("res://Asset/Clear.mp3")
+const FAILED_SOUND := preload("res://Asset/Failed.mp3")
+const SUCCESS_RESULT_DELAY := 3.0
+const CLEAR_TO_RESULT_DELAY := 0.5
 const STRUCTURE_FACE_TEXTURES: Array[Texture2D] = [
 	preload("res://Asset/Face/Verry Good.png"),
 	preload("res://Asset/Face/Good.png"),
@@ -41,6 +45,9 @@ const STRUCTURE_FACE_TEXTURES: Array[Texture2D] = [
 @onready var start_button: Button = %RaidButton
 @onready var structure_face_panel: PanelContainer = %StructureFacePanel
 @onready var structure_face_texture: TextureRect = %StructureFaceTexture
+@onready var ammunition_panel: PanelContainer = %AmmunitionPanel
+@onready var normal_ammo_label: Label = %NormalAmmoLabel
+@onready var bomb_ammo_label: Label = %BombAmmoLabel
 @onready var save_layout_button: Button = %SaveLayoutButton
 @onready var load_layout_button: Button = %LoadLayoutButton
 @onready var layout_status_label: Label = %LayoutStatusLabel
@@ -63,6 +70,8 @@ var _attack_timer: Timer
 var layout_save_path := ""
 var initial_placed_block_count := 0
 var _current_structure_face_index := -1
+var _clear_audio_player: AudioStreamPlayer
+var _failed_audio_player: AudioStreamPlayer
 
 
 func _ready() -> void:
@@ -77,9 +86,20 @@ func _ready() -> void:
 	save_layout_button.pressed.connect(_save_block_layout)
 	load_layout_button.pressed.connect(_load_block_layout)
 	result_button.pressed.connect(_on_result_button_pressed)
+	_clear_audio_player = AudioStreamPlayer.new()
+	_clear_audio_player.name = "ClearAudio"
+	_clear_audio_player.stream = CLEAR_SOUND
+	_clear_audio_player.volume_db = -2.0
+	add_child(_clear_audio_player)
+	_failed_audio_player = AudioStreamPlayer.new()
+	_failed_audio_player.name = "FailedAudio"
+	_failed_audio_player.stream = FAILED_SOUND
+	_failed_audio_player.volume_db = -2.0
+	add_child(_failed_audio_player)
 	result_overlay.hide()
 	result_score_label.hide()
 	structure_face_panel.hide()
+	ammunition_panel.hide()
 	queue_redraw()
 
 func _physics_process(_delta: float) -> void:
@@ -102,11 +122,6 @@ func _physics_process(_delta: float) -> void:
 
 
 func _draw() -> void:
-	var grid_color := Color(1, 1, 1, 0.08)
-	for x in range(0, int(WORLD_WIDTH) + 1, 64):
-		draw_line(Vector2(x, 0), Vector2(x, GROUND_TOP), grid_color, 1.0)
-	for y in range(0, int(GROUND_TOP) + 1, 64):
-		draw_line(Vector2(0, y), Vector2(WORLD_WIDTH, y), grid_color, 1.0)
 	draw_rect(Rect2(0, 0, BUILD_MIN_X, GROUND_TOP), Color(1, 1, 1, 0.035), true)
 	draw_line(Vector2(BUILD_MIN_X, 0), Vector2(BUILD_MIN_X, GROUND_TOP), Color(0.72, 0.72, 0.72, 0.55), 2.0)
 	draw_rect(Rect2(0, GROUND_TOP, WORLD_WIDTH, WORLD_HEIGHT - GROUND_TOP), Color("#282828"), true)
@@ -200,6 +215,7 @@ func place_from_screen(screen_position: Vector2, data: Variant) -> void:
 	placed_objects.append(placed_object)
 	placed_object.tree_exiting.connect(_on_placed_object_removed.bind(placed_object))
 	_change_inventory(str(data["item_id"]), -1)
+	_play_ui_pop_sound()
 
 
 func _screen_to_world(screen_position: Vector2) -> Vector2:
@@ -350,6 +366,7 @@ func _on_purchase_requested(item_id_string: String) -> void:
 	balance -= item.price
 	_change_inventory(item_id_string, 1)
 	_update_balance()
+	_play_ui_pop_sound()
 
 
 func _change_inventory(item_id_string: String, amount: int) -> void:
@@ -552,11 +569,18 @@ func _on_placed_object_input(
 		_change_inventory(item_id_string, 1)
 	placed_objects.erase(placed_object)
 	placed_object.queue_free()
+	_play_ui_pop_sound()
 	get_viewport().set_input_as_handled()
 
 
 func _on_placed_object_removed(placed_object: CollisionObject2D) -> void:
 	placed_objects.erase(placed_object)
+
+
+func _play_ui_pop_sound() -> void:
+	var button_sfx := get_node_or_null("/root/ButtonSfx")
+	if button_sfx != null:
+		button_sfx.call("play_click_sound")
 
 
 func _on_raid_button_pressed() -> void:
@@ -574,6 +598,7 @@ func _on_raid_button_pressed() -> void:
 	start_button.disabled = true
 	save_layout_button.disabled = true
 	load_layout_button.disabled = true
+	ammunition_panel.show()
 	_start_attack_sequence()
 
 
@@ -678,8 +703,32 @@ func _is_pearl_outside_play_area(pearl: Pearl) -> bool:
 func _on_catapult_raid_finished() -> void:
 	if raid_finished:
 		return
-	await get_tree().create_timer(5.0).timeout
+	var pre_clear_delay := maxf(SUCCESS_RESULT_DELAY - CLEAR_TO_RESULT_DELAY, 0.0)
+	if pre_clear_delay > 0.0:
+		await get_tree().create_timer(pre_clear_delay).timeout
+	if raid_finished:
+		return
+	if not _is_level_success_state():
+		_finish_raid(true)
+		return
+	_clear_audio_player.play()
+	await get_tree().create_timer(CLEAR_TO_RESULT_DELAY).timeout
+	if raid_finished:
+		return
+	if not _is_level_success_state():
+		_finish_raid(true)
+		return
 	_finish_raid()
+
+
+func _is_level_success_state() -> bool:
+	var pearls := _get_level_pearls()
+	if pearls.is_empty():
+		return false
+	for pearl in pearls:
+		if _is_pearl_outside_play_area(pearl):
+			return false
+	return true
 
 
 func _finish_raid(force_failure := false) -> void:
@@ -688,13 +737,7 @@ func _finish_raid(force_failure := false) -> void:
 	raid_finished = true
 	_stop_attack_sequence()
 	start_button.disabled = true
-	var pearls := _get_level_pearls()
-	var success := not force_failure and not pearls.is_empty()
-	for pearl in pearls:
-		if _is_pearl_outside_play_area(pearl):
-			success = false
-			break
-	result_overlay.show()
+	var success := not force_failure and _is_level_success_state()
 	if success:
 		var score_index := _get_structure_score_index(_get_remaining_block_ratio())
 		result_text.text = "레벨 %d 성공!" % level_number
@@ -707,6 +750,8 @@ func _finish_raid(force_failure := false) -> void:
 		result_score_label.hide()
 		result_button.text = "다시 시도"
 		result_button.set_meta("success", false)
+		_failed_audio_player.play()
+	result_overlay.show()
 
 func _on_result_button_pressed() -> void:
 	var success := bool(result_button.get_meta("success", false))
@@ -743,6 +788,7 @@ func _start_attack_sequence() -> void:
 	for current_catapult in catapults:
 		_remaining_catapult_shots.append(maxi(0, current_catapult.projectile_count))
 		_remaining_bomb_shots.append(maxi(0, current_catapult.bomb_projectile_count))
+	_update_ammunition_display()
 	if not _has_remaining_catapult_shots():
 		_on_catapult_raid_finished()
 		return
@@ -771,11 +817,26 @@ func _fire_next_catapult() -> void:
 		_remaining_bomb_shots[chosen_index] -= 1
 	else:
 		_remaining_catapult_shots[chosen_index] -= 1
+	_update_ammunition_display()
 	_next_catapult_index = (chosen_index + 1) % catapults.size()
 	if not _has_remaining_catapult_shots():
 		_on_catapult_raid_finished()
 		return
 	_attack_timer.start(maxf(0.1, firing_catapult.fire_interval))
+
+
+func _update_ammunition_display() -> void:
+	var normal_ammo := 0
+	var bomb_ammo := 0
+	for remaining in _remaining_catapult_shots:
+		normal_ammo += maxi(remaining, 0)
+	for remaining in _remaining_bomb_shots:
+		bomb_ammo += maxi(remaining, 0)
+	normal_ammo_label.text = "일반 탄환: %d" % normal_ammo
+	bomb_ammo_label.text = "폭탄 탄환: %d" % bomb_ammo
+	# 컨테이너가 두 텍스트와 내부 여백만큼만 차지하도록 다시 맞춥니다.
+	ammunition_panel.reset_size()
+	ammunition_panel.call_deferred("reset_size")
 
 
 func _has_remaining_catapult_shots() -> bool:

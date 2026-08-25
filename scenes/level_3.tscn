@@ -9,7 +9,7 @@ size = Vector2(307.75, 420)
 
 [node name="Level3" unique_id=1075183369 instance=ExtResource("1_level")]
 level_number = 3
-starting_balance = 350
+starting_balance = 375
 
 [node name="Ground" parent="World" parent_id_path=PackedInt32Array(37528343) index="0" unique_id=1977239935]
 collision_layer = 1

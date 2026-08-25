@@ -16,6 +16,10 @@ run/main_scene="res://scenes/main_menu.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 config/icon="uid://b4m4dh847ro3o"
 
+[autoload]
+
+ButtonSfx="*res://scripts/button_sfx.gd"
+
 [display]
 
 window/size/viewport_width=2560
